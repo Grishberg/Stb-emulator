@@ -173,6 +173,8 @@ public class MqServer {
                                 }
                             }
                         }
+                    } catch (InterruptedException e) {
+                        break;
 
                     } catch (Exception e1) {
                         System.out.println("Connection broken: ");
@@ -198,7 +200,7 @@ public class MqServer {
         JSONRPC2Response onMessage(String queueName, String msg);
     }
 
-    private void release() {
+    public void release() {
         if (mSubscribeThread != null) {
             mSubscribeThread.interrupt();
         }

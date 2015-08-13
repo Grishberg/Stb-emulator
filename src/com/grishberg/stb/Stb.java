@@ -68,6 +68,12 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver {
         return mPlayer;
     }
 
+    public void release(){
+        if(mMqServer != null){
+            mMqServer.release();
+        }
+    }
+
     public void start() {
         getPolicy();
     }
