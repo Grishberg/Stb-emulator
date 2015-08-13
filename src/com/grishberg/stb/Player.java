@@ -84,6 +84,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
 
         playButton.setOnAction(new EventHandler<ActionEvent>() {
             public void handle(ActionEvent e) {
+                /*
                 MediaPlayer.Status status = mp.getStatus();
 
                 if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
@@ -103,6 +104,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
                 } else {
                     mp.pause();
                 }
+                */
             }
         });
 
