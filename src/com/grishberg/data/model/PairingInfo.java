@@ -12,13 +12,6 @@ public class PairingInfo {
     String mac = "";
     String deviceId = "";
 
-    public PairingInfo() {
-        key = "";
-        token = "";
-        mac = "";
-        deviceId = "";
-    }
-
     public PairingInfo(String key, String token, String mac, String deviceId) {
         this.key = key;
         this.token = token;

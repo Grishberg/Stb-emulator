@@ -1,6 +1,9 @@
 package com.grishberg.stb;
 
+import com.grishberg.data.model.PlayerStatus;
+import com.grishberg.interfaces.IPairing;
 import com.grishberg.interfaces.IPlayer;
+import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 import com.thetransactioncompany.jsonrpc2.server.MessageContext;
@@ -16,8 +19,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.*;
-import javafx.scene.media.MediaPlayer;
-import javafx.scene.media.MediaView;
+import javafx.scene.media.*;
 import javafx.util.Duration;
 
 import javafx.application.Platform;
@@ -40,7 +42,13 @@ import javafx.scene.media.MediaPlayer.Status;
 import javafx.scene.media.MediaView;
 import javafx.util.Duration;
 
+import java.util.List;
+
 public class Player extends BorderPane implements IPlayer, RequestHandler {
+
+    private enum PlayerState {
+        NONE, PLAYING, PAUSED, STOPPED
+    }
 
     private MediaPlayer mp;
     private MediaView mediaView;
@@ -53,10 +61,25 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
     private Slider volumeSlider;
     private HBox mediaBar;
 
-    public Player(final MediaPlayer mp) {
-        this.mp = mp;
+    private PlayerState mState = PlayerState.NONE;
+    private String mContentTitle;
+    private int mEkId;
+    private int mEpId;
+    private IPairing mPairing;
+
+    private static final String MEDIA_URL = "file:/home/g/Видео/test.flv";
+
+    public Player(IPairing pairing) {
+        mPairing = pairing;
+
+        // создаем медиаплеер
+        Media media = new Media(MEDIA_URL);
+        mp = new MediaPlayer(media);
+        mp.setAutoPlay(false);
+
         setStyle("-fx-background-color: #bfc2c7;");
         mediaView = new MediaView(mp);
+
         Pane mvPane = new Pane() {
         };
         mvPane.getChildren().add(mediaView);
@@ -186,6 +209,28 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
         setBottom(mediaBar);
     }
 
+    public void playPause(){
+        MediaPlayer.Status status = mp.getStatus();
+
+        if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
+            // don't do anything in these states
+            return;
+        }
+
+        if (status == MediaPlayer.Status.PAUSED
+                || status == MediaPlayer.Status.READY
+                || status == MediaPlayer.Status.STOPPED) {
+            // rewind the movie if we're sitting at the end
+            if (atEndOfMedia) {
+                mp.seek(mp.getStartTime());
+                atEndOfMedia = false;
+            }
+            mp.play();
+        } else {
+            mp.pause();
+        }
+    }
+
     protected void updateValues() {
         if (playTime != null && timeSlider != null && volumeSlider != null) {
             Platform.runLater(new Runnable() {
@@ -248,23 +293,69 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
     }
 
     @Override
-    public void playContent(int id, int episode, String studio, int startSec, String accessToken) {
-
+    public void playContent(String id, int episode, String studio, int startSec) {
+        playPause();
     }
 
     @Override
-    public void playStream(int idStream, int startSec, String accessToken) {
-
+    public void playStream(String idStream, int startSec) {
+        playPause();
     }
+
+    @Override
+    public PlayerStatus getStatus() {
+        return new PlayerStatus(mEkId, mEkId, mContentTitle, mState.ordinal());
+    }
+
     //--------------- JSONRPC2------------------
 
     @Override
     public String[] handledRequests() {
-        return new String[]{"playContent", "playStream"};
+        return new String[]{"Player.playContent"
+                , "Player.playStream", "Player.getStatus"};
     }
 
     @Override
     public JSONRPC2Response process(JSONRPC2Request jsonrpc2Request, MessageContext messageContext) {
-        return null;
+        String method = jsonrpc2Request.getMethod();
+        List params = (List) jsonrpc2Request.getParams();
+        String token = null;
+        if (method.equals("Player.getStatus")) {
+            if (params.size() < 1) {
+                return new JSONRPC2Response(JSONRPC2Error.INVALID_PARAMS, jsonrpc2Request.getID());
+            }
+            token = (String) params.get(0);
+            if (mPairing.getProfile(token) == null) {
+                //wrong token
+            }
+            return new JSONRPC2Response(getStatus(), jsonrpc2Request.getID());
+        } else if (method.equals("Player.playContent")) {
+            try {
+                //TODO: check token
+                String id = (String) params.get(0);
+                int episode = (int) ((long) params.get(1));
+                String studio = (String) params.get(2);
+                int startSec = (int) ((long) params.get(3));
+                playContent(id, episode, studio, startSec);
+                return new JSONRPC2Response("", jsonrpc2Request.getID());
+
+            } catch (Exception e) {
+                System.out.println("rpc error " + e.toString());
+                return new JSONRPC2Response(new JSONRPC2Error(-1, "error"), jsonrpc2Request.getID());
+            }
+        } else if (method.equals("Player.playStream")) {
+            try {
+                //TODO: check token
+                String id = (String) params.get(0);
+                int startSec = (int)((long) params.get(3));
+                playStream(id, startSec);
+                return new JSONRPC2Response("", jsonrpc2Request.getID());
+
+            } catch (Exception e) {
+                System.out.println("rpc error " + e.toString());
+                return new JSONRPC2Response(new JSONRPC2Error(-1, "error"), jsonrpc2Request.getID());
+            }
+        }
+        return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, jsonrpc2Request.getID());
     }
 }

@@ -10,29 +10,29 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.stage.Stage;
 
-public class Main extends Application {
-    private static final String MEDIA_URL = "file:/home/g/Видео/test.flv";
+public class Main extends Application implements Stb.IOnRegisteredObserver {
     private Stb mStb;
     private Input mInput;
     private Player mPlayer;
-    
+
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("STB emulator");
         Group root = new Group();
         Scene scene = new Scene(root, 540, 240);
-        // создаем медиаплеер
-        Media media = new Media (MEDIA_URL);
-        MediaPlayer mediaPlayer = new MediaPlayer(media);
-        mediaPlayer.setAutoPlay(true);
-        mPlayer = new Player(mediaPlayer);
-        scene.setRoot(mPlayer);
 
-        mInput = new Input(mPlayer);
-        mStb = new Stb(mInput, mPlayer);
+        mStb = new Stb(this);
+
+        scene.setRoot(mStb.getMediaPlayer());
         mStb.start();
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    @Override
+    public void onRegistered(String secretKey) {
+        //TODO: show secret key
+        System.out.println("device registered, key = " + secretKey);
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.grishberg.stb;
 
 import com.grishberg.interfaces.IInput;
+import com.grishberg.interfaces.IPairing;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 import com.thetransactioncompany.jsonrpc2.server.MessageContext;
@@ -11,9 +12,11 @@ import com.thetransactioncompany.jsonrpc2.server.RequestHandler;
  */
 public class Input implements IInput , RequestHandler {
     private Player mPlayer;
+    private IPairing mParing;
 
-    public Input(Player player) {
+    public Input(Player player,IPairing pairing) {
         mPlayer = player;
+        mParing = pairing;
     }
 
     @Override

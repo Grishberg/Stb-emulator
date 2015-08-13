@@ -24,6 +24,11 @@ public final class RestConst {
         public static final String PAIR_TOKEN = "pair_token";
         public static final String KEY = "key";
 
+        public static final String EK_ID = "EK_Id";
+        public static final String EP_ID = "EP_Id";
+        public static final String EK_TITLE = "EK-Title";
+        public static final String STATE = "state";
+
         private field() {
         }
     }

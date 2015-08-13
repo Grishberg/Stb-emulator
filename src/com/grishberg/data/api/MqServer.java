@@ -3,8 +3,10 @@ package com.grishberg.data.api;
 import com.grishberg.data.model.MqOutMessage;
 import com.rabbitmq.client.*;
 
+import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 import javafx.concurrent.Task;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -33,17 +35,19 @@ public class MqServer {
     private BlockingDeque mOutMessagesQueue;
 
     private List<String> mDevicesQueues;
+    private IMqObserver mMqObserver;
 
-    public MqServer(String id, String host, String mac) {
+    public MqServer(String id, String host, String mac, IMqObserver observer) {
         this.id = id;
         this.host = host;
         this.mMac = mac;
-
+        mMqObserver = observer;
         mDevicesQueues = new ArrayList<>(10);
         mConnectionFactory = new ConnectionFactory();
         mOutMessagesQueue = new LinkedBlockingDeque();
         setupConnectionFactory(host);
-        initSubscribeToAMQP(mMac);
+        initSubscribeToAMQP();
+        initPublishToAMQP();
     }
 
     /**
@@ -60,6 +64,14 @@ public class MqServer {
         }
     }
 
+    public void sendMqMessage(MqOutMessage message) {
+        try {
+            mOutMessagesQueue.putLast(message);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * start publishing thread
      */
@@ -72,23 +84,22 @@ public class MqServer {
                         Connection connection = mConnectionFactory.newConnection();
                         Channel channel = connection.createChannel();
                         channel.confirmSelect();
-                        //send message with status init publish OK
-                        sendSimpleMessage(STATUS_PUBLISHED);
                         while (true) {
                             MqOutMessage mqOutMessage = (MqOutMessage) mOutMessagesQueue.takeFirst();
                             try {
-                                String corrId = java.util.UUID.randomUUID().toString();
-                                String routingKey = mMac;
+                                String corrId = mqOutMessage.getCorrId();
+                                String routingKey = mqOutMessage.getClientQueueName();
                                 AMQP.BasicProperties props = new AMQP.BasicProperties
                                         .Builder()
                                         .correlationId(corrId)
-                                        //.appId(mqOutMessage.getToken())
-                                        .replyTo(mqOutMessage.getClientQueueName())
+                                                //.appId(mqOutMessage.getToken())
+                                                //.replyTo(mqOutMessage.getClientQueueName())
                                         .build();
-                                channel.basicPublish(mExchange, routingKey, props,
+                                channel.basicPublish("", routingKey, props,
                                         mqOutMessage.getMessage().getBytes());
                                 System.out.println("[s] " + mqOutMessage.getMessage());
-                                channel.waitForConfirmsOrDie();
+                                channel.basicAck(mqOutMessage.getDeliveryTag(), false);
+                                //channel.waitForConfirmsOrDie();
                             } catch (Exception e) {
                                 System.out.println("[f] " + mqOutMessage.getMessage());
                                 mOutMessagesQueue.putFirst(mqOutMessage);
@@ -113,10 +124,8 @@ public class MqServer {
 
     /**
      * start subscription thread
-     *
-     * @param mac mac address of paired device
      */
-    private void initSubscribeToAMQP(final String mac) {
+    private void initSubscribeToAMQP() {
         mSubscribeThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -126,12 +135,23 @@ public class MqServer {
                     try {
                         connection = mConnectionFactory.newConnection();
                         channel = connection.createChannel();
-                        String routingKey = mac;
+                        channel.exchangeDeclare(mExchange, "direct");
 
                         // создаем очередь для поступающих от МП сообщений
-                        AMQP.Queue.DeclareOk q = channel.queueDeclare(mMac, false, true, true, null);
+                        AMQP.Queue.DeclareOk serverQueue = channel.queueDeclare(mMac, false, false, true, null);
+
+                        // забиндиться к очереди
+                        AMQP.Queue.BindOk bindStatus = channel.queueBind(serverQueue.getQueue(), mExchange, mMac);
+
+                        //sync consume
                         QueueingConsumer consumer = new QueueingConsumer(channel);
-                        channel.basicConsume(q.getQueue(), true, consumer);
+                        channel.basicConsume(serverQueue.getQueue(), true, consumer);
+
+                        // отправить сообщение об успешной операции
+                        if (mMqObserver != null) {
+                            mMqObserver.onBoundOk();
+                        }
+
 
                         while (true) {
                             //ожидаем входящее сообщение
@@ -140,9 +160,20 @@ public class MqServer {
                             //extract id and send to main thread
                             System.out.println("[r] " + message);
                             //TODO: разобрать рпц запрос
+                            if (mMqObserver != null) {
+                                String replyQueueName = delivery.getProperties().getReplyTo();
+                                JSONRPC2Response response = mMqObserver.onMessage(replyQueueName, message);
+                                if (response != null) {
+                                    sendMqMessage(new MqOutMessage(
+                                                    replyQueueName
+                                                    , response.toJSONString()
+                                                    , delivery.getProperties().getCorrelationId()
+                                                    , delivery.getEnvelope().getDeliveryTag())
+                                    );
+                                }
+                            }
                         }
-                    } catch (InterruptedException e) {
-                        break;
+
                     } catch (Exception e1) {
                         System.out.println("Connection broken: ");
                         try {
@@ -157,7 +188,24 @@ public class MqServer {
         mSubscribeThread.start();
     }
 
-    private void sendSimpleMessage(int status){
+    private void sendSimpleMessage(int status) {
 
+    }
+
+    public interface IMqObserver {
+        void onBoundOk();
+
+        JSONRPC2Response onMessage(String queueName, String msg);
+    }
+
+    private void release() {
+        if (mSubscribeThread != null) {
+            mSubscribeThread.interrupt();
+        }
+        if (mPublishThread != null) {
+            mPublishThread.interrupt();
+        }
+        mSubscribeThread = null;
+        mPublishThread = null;
     }
 }
