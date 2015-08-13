@@ -13,6 +13,7 @@ import java.io.File;
 
 public class Main extends Application {
     private static final String MEDIA_URL = "file:/home/g/Видео/test.flv";
+
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Embedded Media Player");
