@@ -1,5 +1,10 @@
-package sample;
+package com.grishberg.stb;
 
+import com.grishberg.interfaces.IPlayer;
+import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
+import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
+import com.thetransactioncompany.jsonrpc2.server.MessageContext;
+import com.thetransactioncompany.jsonrpc2.server.RequestHandler;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -35,7 +40,7 @@ import javafx.scene.media.MediaPlayer.Status;
 import javafx.scene.media.MediaView;
 import javafx.util.Duration;
 
-public class MediaControl extends BorderPane {
+public class Player extends BorderPane implements IPlayer, RequestHandler {
 
     private MediaPlayer mp;
     private MediaView mediaView;
@@ -48,7 +53,7 @@ public class MediaControl extends BorderPane {
     private Slider volumeSlider;
     private HBox mediaBar;
 
-    public MediaControl(final MediaPlayer mp) {
+    public Player(final MediaPlayer mp) {
         this.mp = mp;
         setStyle("-fx-background-color: #bfc2c7;");
         mediaView = new MediaView(mp);
@@ -240,5 +245,26 @@ public class MediaControl extends BorderPane {
                         elapsedSeconds);
             }
         }
+    }
+
+    @Override
+    public void playContent(int id, int episode, String studio, int startSec, String accessToken) {
+
+    }
+
+    @Override
+    public void playStream(int idStream, int startSec, String accessToken) {
+
+    }
+    //--------------- JSONRPC2------------------
+
+    @Override
+    public String[] handledRequests() {
+        return new String[]{"playContent", "playStream"};
+    }
+
+    @Override
+    public JSONRPC2Response process(JSONRPC2Request jsonrpc2Request, MessageContext messageContext) {
+        return null;
     }
 }
