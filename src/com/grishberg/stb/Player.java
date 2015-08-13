@@ -1,9 +1,14 @@
 package com.grishberg.stb;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.grishberg.data.model.PlayerStatus;
+import com.grishberg.data.rest.RestConst;
 import com.grishberg.interfaces.IPairing;
 import com.grishberg.interfaces.IPlayer;
+import com.grishberg.interfaces.IPlayerObserver;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
+import com.thetransactioncompany.jsonrpc2.JSONRPC2Notification;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 import com.thetransactioncompany.jsonrpc2.server.MessageContext;
@@ -29,9 +34,18 @@ import javafx.scene.layout.Pane;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Player extends BorderPane implements IPlayer, RequestHandler {
+
+    private static final String COMMAND_PLAY_STREAM = "Player.playStream";
+    private static final String COMMAND_PLAY_CONTENT = "Player.playContent";
+    private static final String COMMAND_GET_STATUS = "Player.getStatus";
+
+    private static final String NOTIFY_END_PLAYING = "onPlayEndNotify";
+    private static final String NOTIFY_START_PLAYING = "onStartPlaying";
 
     private enum PlayerState {
         NONE, PLAYING, PAUSED, STOPPED
@@ -54,17 +68,26 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
     private int mEpId;
     private int mIdStream;
     private IPairing mPairing;
+    private IPlayerObserver mPlayerObserver;
+    private double mVolume = 100;
+    private double mVolumeDelta = 5;
 
     private static final String[] CONTENT = {
             "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8"
+            ,"http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8"
+            ,"http://vevoplaylist-live.hls.adaptive.level3.net/vevo/ch1/appleman.m3u8"
+            ,"http://srv6.zoeweb.tv:1935/z330-live/stream/playlist.m3u8"
     };
     private static final String[] CONTENT_TITLE = {
-            "test"
+            "jobs"
+            ,"bip bop"
+            ,"live tv 1"
+            ,"live tv 2"
     };
 
-    public Player(IPairing pairing) {
+    public Player(IPairing pairing, IPlayerObserver playerObserver) {
         mPairing = pairing;
-
+        mPlayerObserver = playerObserver;
         setStyle("-fx-background-color: #bfc2c7;");
         mMediaView = new MediaView();
 
@@ -151,6 +174,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
             public void invalidated(Observable ov) {
                 if (volumeSlider.isValueChanging()) {
                     mp.setVolume(volumeSlider.getValue() / 100.0);
+                    mVolume = volumeSlider.getValue() / 100.0;
                 }
             }
         });
@@ -170,6 +194,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
             public void run() {
                 if (stopRequested) {
                     mp.pause();
+                    mState = PlayerState.PAUSED;
                     stopRequested = false;
                 } else {
                     //playButton.setText("||");
@@ -180,6 +205,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
         mp.setOnPaused(new Runnable() {
             public void run() {
                 System.out.println("onPaused");
+                mState = PlayerState.PAUSED;
                 //playButton.setText(">");
             }
         });
@@ -188,6 +214,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
             public void run() {
                 duration = mp.getMedia().getDuration();
                 updateValues();
+                mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_START_PLAYING).toJSONString());
             }
         });
 
@@ -200,9 +227,31 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
                     //playButton.setText(">");
                     stopRequested = true;
                     atEndOfMedia = true;
+                    mState = PlayerState.STOPPED;
+                    if(mPlayerObserver != null){
+                        mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_END_PLAYING).toJSONString());
+                    }
                 }
             }
         });
+    }
+
+    public void volumeUp(){
+        mVolume -= mVolumeDelta;
+        if( mVolume < 0){
+            mVolume = 0;
+        }
+        mp.setVolume(mVolume);
+        volumeSlider.setValue(mVolume);
+    }
+
+    public void volumeDown(){
+        mVolume += mVolumeDelta;
+        if(mVolume > 100){
+            mVolume = 100;
+        }
+        mp.setVolume(mVolume);
+        volumeSlider.setValue(mVolume);
     }
 
     public void playPause() {
@@ -222,8 +271,10 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
                 atEndOfMedia = false;
             }
             mp.play();
+            mState = PlayerState.PLAYING;
         } else {
             mp.pause();
+            mState = PlayerState.PAUSED;
         }
     }
 
@@ -318,59 +369,49 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
     }
 
     @Override
-    public PlayerStatus getStatus() {
-        return new PlayerStatus(mEkId, mEkId, mContentTitle, mState.ordinal());
+    public Map<String,Object> getStatus() {
+        Map<String, Object> result = new HashMap<>();
+        result.put(RestConst.field.EK_ID, mEkId);
+        result.put(RestConst.field.EP_ID, mEpId);
+        result.put(RestConst.field.EK_TITLE, mContentTitle);
+        result.put(RestConst.field.STATE, mState.ordinal());
+        return result;
     }
 
     //--------------- JSONRPC2------------------
 
     @Override
     public String[] handledRequests() {
-        return new String[]{"Player.playContent"
-                , "Player.playStream", "Player.getStatus"};
+        return new String[]{COMMAND_PLAY_CONTENT, COMMAND_PLAY_STREAM, COMMAND_GET_STATUS};
     }
 
     @Override
     public JSONRPC2Response process(JSONRPC2Request jsonrpc2Request, MessageContext messageContext) {
-        String method = jsonrpc2Request.getMethod();
         List params = (List) jsonrpc2Request.getParams();
         String token = null;
-        if (method.equals("Player.getStatus")) {
-            if (params.size() < 1) {
-                return new JSONRPC2Response(JSONRPC2Error.INVALID_PARAMS, jsonrpc2Request.getID());
-            }
-            token = (String) params.get(0);
-            if (mPairing.getProfile(token) == null) {
-                //wrong token
-            }
-            return new JSONRPC2Response(getStatus(), jsonrpc2Request.getID());
-        } else if (method.equals("Player.playContent")) {
-            try {
+        int id;
+        int startSec;
+        switch (jsonrpc2Request.getMethod()) {
+            case COMMAND_GET_STATUS:
+                return new JSONRPC2Response(getStatus(), jsonrpc2Request.getID());
+            case COMMAND_PLAY_CONTENT:
                 //TODO: check token
-                int id = (int) ((long) params.get(0));
+                id = (int) ((long) params.get(0));
                 int episode = (int) ((long) params.get(1));
                 String studio = (String) params.get(2);
-                int startSec = (int) ((long) params.get(3));
+                startSec = (int) ((long) params.get(3));
                 playContent(id, episode, studio, startSec);
                 return new JSONRPC2Response("", jsonrpc2Request.getID());
 
-            } catch (Exception e) {
-                System.out.println("rpc error " + e.toString());
-                return new JSONRPC2Response(new JSONRPC2Error(-1, "error"), jsonrpc2Request.getID());
-            }
-        } else if (method.equals("Player.playStream")) {
-            try {
+            case COMMAND_PLAY_STREAM:
                 //TODO: check token
-                int id = (int) ((long) params.get(0));
-                int startSec = (int) ((long) params.get(1));
+                id = (int) ((long) params.get(0));
+                startSec = (int) ((long) params.get(1));
                 playStream(id, startSec);
                 return new JSONRPC2Response("", jsonrpc2Request.getID());
-
-            } catch (Exception e) {
-                System.out.println("rpc error " + e.toString());
-                return new JSONRPC2Response(new JSONRPC2Error(-1, "error"), jsonrpc2Request.getID());
-            }
+            default:
+                return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, jsonrpc2Request.getID());
         }
-        return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, jsonrpc2Request.getID());
+        //return new JSONRPC2Response(new JSONRPC2Error(-1, "error"), jsonrpc2Request.getID());
     }
 }

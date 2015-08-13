@@ -5,6 +5,8 @@ import com.grishberg.stb.Player;
 import com.grishberg.stb.Stb;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -26,8 +28,8 @@ public class Main extends Application implements Stb.IOnRegisteredObserver {
         Scene scene = new Scene(root, 540, 240);
 
         mStb = new Stb(this);
-
         BorderPane rootPane = new BorderPane();
+
         rootPane.setCenter(mStb.getMediaPlayer());
 
         // Add secret code label
@@ -61,6 +63,7 @@ public class Main extends Application implements Stb.IOnRegisteredObserver {
         if(mStb != null){
             mStb.release();
         }
+
     }
 
     /**

@@ -79,28 +79,28 @@ public class MqServer {
     /**
      * start publishing thread
      */
-    private void reconnect() throws IOException, TimeoutException{
-        if(! mConnected ) {
+    private void reconnect() throws IOException, TimeoutException {
+        if (!mConnected) {
             mConnection = mConnectionFactory.newConnection();
             mChannel = mConnection.createChannel();
             mConnected = true;
         }
     }
 
-    private void publishMessage(MqOutMessage mqOutMessage) throws IOException{
-            String corrId = mqOutMessage.getCorrId();
-            String routingKey = mqOutMessage.getClientQueueName();
-            AMQP.BasicProperties props = new AMQP.BasicProperties
-                    .Builder()
-                    .correlationId(corrId)
-                            //.appId(mqOutMessage.getToken())
-                            //.replyTo(mqOutMessage.getClientQueueName())
-                    .build();
-            mChannel.basicPublish("", routingKey, props,
-                    mqOutMessage.getMessage().getBytes());
-            System.out.println("[s] " + mqOutMessage.getMessage());
-            //mChannel.basicAck(mqOutMessage.getDeliveryTag(), false);
-            //channel.waitForConfirmsOrDie();
+    private void publishMessage(MqOutMessage mqOutMessage) throws IOException {
+        String corrId = mqOutMessage.getCorrId();
+        String routingKey = mqOutMessage.getClientQueueName();
+        AMQP.BasicProperties props = new AMQP.BasicProperties
+                .Builder()
+                .correlationId(corrId)
+                        //.appId(mqOutMessage.getToken())
+                        //.replyTo(mqOutMessage.getClientQueueName())
+                .build();
+        mChannel.basicPublish("", routingKey, props,
+                mqOutMessage.getMessage().getBytes());
+        System.out.println("[s] " + mqOutMessage.getMessage());
+        //mChannel.basicAck(mqOutMessage.getDeliveryTag(), false);
+        //channel.waitForConfirmsOrDie();
     }
 
     // send notifications
@@ -114,6 +114,10 @@ public class MqServer {
                         //channel.confirmSelect();
                         while (true) {
                             MqOutMessage mqOutMessage = (MqOutMessage) mOutMessagesQueue.takeFirst();
+                            if((Thread.currentThread().interrupted()))
+                            {
+                                return;
+                            }
                             try {
                                 publishMessage(mqOutMessage);
                             } catch (Exception e) {
@@ -134,6 +138,7 @@ public class MqServer {
                         }
                     }
                 }
+                System.out.println("end publish thread");
             }
         });
         mPublishThread.start();
@@ -175,13 +180,13 @@ public class MqServer {
                             //TODO: разобрать рпц запрос
                             if (mMqObserver != null) {
                                 String replyQueueName = delivery.getProperties().getReplyTo();
-                                JSONRPC2Response response = mMqObserver.onMessage(replyQueueName, message);
+                                JSONRPC2Response response = mMqObserver.onMessage(replyQueueName
+                                        , delivery.getProperties().getCorrelationId(), message);
                                 if (response != null) {
                                     publishMessage(new MqOutMessage(
                                             replyQueueName
                                             , response.toJSONString()
-                                            , delivery.getProperties().getCorrelationId()
-                                            , delivery.getEnvelope().getDeliveryTag()));
+                                            , delivery.getProperties().getCorrelationId()));
                                 }
                             }
                         }
@@ -198,8 +203,9 @@ public class MqServer {
                         }
                     }
                 }
-
+                System.out.println("end subscribe thread");
             }
+
         });
         mSubscribeThread.start();
     }
@@ -211,15 +217,24 @@ public class MqServer {
     public interface IMqObserver {
         void onBoundOk();
 
-        JSONRPC2Response onMessage(String queueName, String msg);
+        JSONRPC2Response onMessage(String queueName, String corrId, String msg);
     }
 
     public void release() {
+
+        mOutMessagesQueue.clear();
         if (mSubscribeThread != null) {
             mSubscribeThread.interrupt();
         }
         if (mPublishThread != null) {
             mPublishThread.interrupt();
+        }
+
+        try {
+            mConnection.close();
+            mChannel.close();
+        } catch (Exception e){
+
         }
         mSubscribeThread = null;
         mPublishThread = null;

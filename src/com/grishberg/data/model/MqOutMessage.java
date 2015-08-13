@@ -14,11 +14,10 @@ public class MqOutMessage {
         this.message = message;
     }
 
-    public MqOutMessage(String clientQueueName, String message, String corrId, long deliveryTag) {
+    public MqOutMessage(String clientQueueName, String message, String corrId) {
         this.clientQueueName = clientQueueName;
         this.message = message;
         this.corrId = corrId;
-        this.deliveryTag = deliveryTag;
     }
 
     public String getCorrId() {
@@ -31,9 +30,5 @@ public class MqOutMessage {
 
     public String getMessage() {
         return message;
-    }
-
-    public long getDeliveryTag() {
-        return deliveryTag;
     }
 }

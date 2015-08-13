@@ -7,14 +7,12 @@ import com.grishberg.data.model.MqOutMessage;
 import com.grishberg.data.model.MqPolicyResponse;
 import com.grishberg.data.model.PairingInfo;
 import com.grishberg.data.rest.RestConst;
+import com.grishberg.interfaces.IPlayerObserver;
 import com.grishberg.interfaces.ITokenLObserver;
 import com.grishberg.interfaces.LinkingPolicyService;
 
 // The JSON-RPC 2.0 server framework package
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2ParseException;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
+import com.thetransactioncompany.jsonrpc2.*;
 import com.thetransactioncompany.jsonrpc2.server.*;
 import retrofit.Callback;
 import retrofit.RestAdapter;
@@ -33,7 +31,7 @@ import com.grishberg.framework.*;
 /**
  * Created by g on 13.08.15.
  */
-public class Stb implements MqServer.IMqObserver, ITokenLObserver {
+public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserver {
 
     private static final String TAG = Stb.class.getSimpleName();
     private String mId = "01234567890";
@@ -48,13 +46,15 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver {
     private String mHost;
     private String mToken;
     private IOnRegisteredObserver mRegisteredObserver;
+    private String mLastQueueName;
+    private String mLastCorrId;
 
     public Stb(IOnRegisteredObserver observer) {
         mMac = generateMac();
         mId = generateId();
         mPairing = new Pairing(this);
+        mPlayer = new Player(mPairing, this);
         mInput = new Input(mPlayer, mPairing);
-        mPlayer = new Player(mPairing);
         mToken = null;
         mPolicyService = buildRestAdapter().create(LinkingPolicyService.class);
         mDispatcher = new Dispatcher();
@@ -130,8 +130,10 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver {
     }
 
     @Override
-    public JSONRPC2Response onMessage(String queueName, String msg) {
+    public JSONRPC2Response onMessage(String queueName, String corrId, String msg) {
         System.out.println("on new message msg = " + msg);
+        mLastQueueName = queueName;
+        mLastCorrId = corrId;
         JSONRPC2Request request = null;
         try {
 
@@ -149,6 +151,12 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver {
     @Override
     public String getLastToken() {
         return mToken;
+    }
+
+    @Override
+    public void onNotify(String msg) {
+        mMqServer.sendMqMessage(new MqOutMessage(mLastQueueName,mLastCorrId
+                ,msg));
     }
 
     public static String getMqAddress(List<String> addresses, String mac) {
