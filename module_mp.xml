@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_mp" default="compile.module.mp">
+  <dirname property="module.mp.basedir" file="${ant.file.module_mp}"/>
+  
+  <property name="module.jdk.home.mp" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.mp" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.mp" value="${project.jdk.classpath}"/>
+  
+  <property name="compiler.args.mp" value="-encoding UTF-8 -source 8 ${compiler.args}"/>
+  
+  <property name="mp.output.dir" value="${module.mp.basedir}/out/production/MP"/>
+  <property name="mp.testoutput.dir" value="${module.mp.basedir}/out/test/MP"/>
+  
+  <path id="mp.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="mp.module.production.classpath">
+    <path refid="${module.jdk.classpath.mp}"/>
+    <path refid="library.commons-cli-1.1.classpath"/>
+    <path refid="library.commons-io-1.2.classpath"/>
+    <path refid="library.com.thetransactioncompany:jsonrpc2-server:1.11.classpath"/>
+    <path refid="library.com.squareup.retrofit:retrofit:1.9.0.classpath"/>
+  </path>
+  
+  <path id="mp.runtime.production.module.classpath">
+    <pathelement location="${mp.output.dir}"/>
+    <path refid="library.commons-cli-1.1.classpath"/>
+    <path refid="library.commons-io-1.2.classpath"/>
+    <path refid="library.com.thetransactioncompany:jsonrpc2-server:1.11.classpath"/>
+    <path refid="library.com.squareup.retrofit:retrofit:1.9.0.classpath"/>
+  </path>
+  
+  <path id="mp.module.classpath">
+    <path refid="${module.jdk.classpath.mp}"/>
+    <pathelement location="${mp.output.dir}"/>
+    <path refid="library.commons-cli-1.1.classpath"/>
+    <path refid="library.commons-io-1.2.classpath"/>
+    <path refid="library.com.thetransactioncompany:jsonrpc2-server:1.11.classpath"/>
+    <path refid="library.com.squareup.retrofit:retrofit:1.9.0.classpath"/>
+  </path>
+  
+  <path id="mp.runtime.module.classpath">
+    <pathelement location="${mp.testoutput.dir}"/>
+    <pathelement location="${mp.output.dir}"/>
+    <path refid="library.commons-cli-1.1.classpath"/>
+    <path refid="library.commons-io-1.2.classpath"/>
+    <path refid="library.com.thetransactioncompany:jsonrpc2-server:1.11.classpath"/>
+    <path refid="library.com.squareup.retrofit:retrofit:1.9.0.classpath"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.mp">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.mp">
+    <patternset refid="excluded.from.module.mp"/>
+  </patternset>
+  
+  <path id="mp.module.sourcepath">
+    <dirset dir="${module.mp.basedir}">
+      <include name="src"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.mp" depends="compile.module.mp.production,compile.module.mp.tests" description="Compile module MP"/>
+  
+  <target name="compile.module.mp.production" depends="register.custom.compilers" description="Compile module MP; production classes">
+    <mkdir dir="${mp.output.dir}"/>
+    <javac2 destdir="${mp.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.mp}/javac">
+      <compilerarg line="${compiler.args.mp}"/>
+      <bootclasspath refid="mp.module.bootclasspath"/>
+      <classpath refid="mp.module.production.classpath"/>
+      <src refid="mp.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.mp"/>
+    </javac2>
+    
+    <copy todir="${mp.output.dir}">
+      <fileset dir="${module.mp.basedir}/src">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.mp.tests" depends="register.custom.compilers,compile.module.mp.production" description="compile module MP; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.mp" description="cleanup module">
+    <delete dir="${mp.output.dir}"/>
+    <delete dir="${mp.testoutput.dir}"/>
+  </target>
+</project>
