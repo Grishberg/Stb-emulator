@@ -6,6 +6,7 @@ import com.grishberg.stb.Stb;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.stage.Stage;
@@ -22,6 +23,8 @@ public class Main extends Application implements Stb.IOnRegisteredObserver {
         Scene scene = new Scene(root, 540, 240);
 
         mStb = new Stb(this);
+
+        BorderPane root = new BorderPane();
 
         scene.setRoot(mStb.getMediaPlayer());
         mStb.start();

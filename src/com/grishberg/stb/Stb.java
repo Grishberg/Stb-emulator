@@ -100,7 +100,8 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver {
         registerDevice();
     }
 
-    private void registerDevice() {
+    @Override
+    public void registerDevice() {
         mKey = generateSecretKey();
         final String token = generateToken();
         PairingInfo pairingInfo = new PairingInfo(mKey, token, mMac, mId);

@@ -18,29 +18,16 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
-import javafx.scene.layout.*;
 import javafx.scene.media.*;
 import javafx.util.Duration;
 
-import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.Slider;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.media.MediaPlayer;
-import javafx.scene.media.MediaPlayer.Status;
 import javafx.scene.media.MediaView;
-import javafx.util.Duration;
 
 import java.util.List;
 
@@ -51,7 +38,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
     }
 
     private MediaPlayer mp;
-    private MediaView mediaView;
+    private MediaView mMediaView;
     private final boolean repeat = false;
     private boolean stopRequested = false;
     private boolean atEndOfMedia = false;
@@ -65,24 +52,26 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
     private String mContentTitle;
     private int mEkId;
     private int mEpId;
+    private int mIdStream;
     private IPairing mPairing;
 
-    private static final String MEDIA_URL = "file:/home/g/Видео/test.flv";
+    private static final String[] CONTENT = {
+            "file:/home/g/Видео/test.flv"
+    };
+    private static final String[] CONTENT_TITLE = {
+            "test"
+    };
 
     public Player(IPairing pairing) {
         mPairing = pairing;
 
-        // создаем медиаплеер
-        Media media = new Media(MEDIA_URL);
-        mp = new MediaPlayer(media);
-        mp.setAutoPlay(false);
-
         setStyle("-fx-background-color: #bfc2c7;");
-        mediaView = new MediaView(mp);
+        mMediaView = new MediaView();
+
 
         Pane mvPane = new Pane() {
         };
-        mvPane.getChildren().add(mediaView);
+        mvPane.getChildren().add(mMediaView);
         mvPane.setStyle("-fx-background-color: black;");
         setCenter(mvPane);
 
@@ -116,47 +105,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
                 }
             }
         });
-        mp.currentTimeProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                updateValues();
-            }
-        });
 
-        mp.setOnPlaying(new Runnable() {
-            public void run() {
-                if (stopRequested) {
-                    mp.pause();
-                    stopRequested = false;
-                } else {
-                    playButton.setText("||");
-                }
-            }
-        });
-
-        mp.setOnPaused(new Runnable() {
-            public void run() {
-                System.out.println("onPaused");
-                playButton.setText(">");
-            }
-        });
-
-        mp.setOnReady(new Runnable() {
-            public void run() {
-                duration = mp.getMedia().getDuration();
-                updateValues();
-            }
-        });
-
-        mp.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
-        mp.setOnEndOfMedia(new Runnable() {
-            public void run() {
-                if (!repeat) {
-                    playButton.setText(">");
-                    stopRequested = true;
-                    atEndOfMedia = true;
-                }
-            }
-        });
 
         mediaBar.getChildren().add(playButton);
         // Add spacer
@@ -209,7 +158,53 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
         setBottom(mediaBar);
     }
 
-    public void playPause(){
+    private void initMediaPlayer() {
+        mp.currentTimeProperty().addListener(new InvalidationListener() {
+            public void invalidated(Observable ov) {
+                updateValues();
+            }
+        });
+
+        mp.setOnPlaying(new Runnable() {
+            public void run() {
+                if (stopRequested) {
+                    mp.pause();
+                    stopRequested = false;
+                } else {
+                    //playButton.setText("||");
+                }
+            }
+        });
+
+        mp.setOnPaused(new Runnable() {
+            public void run() {
+                System.out.println("onPaused");
+                //playButton.setText(">");
+            }
+        });
+
+        mp.setOnReady(new Runnable() {
+            public void run() {
+                duration = mp.getMedia().getDuration();
+                updateValues();
+            }
+        });
+
+        mp.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
+        mp.setOnEndOfMedia(new Runnable() {
+            public void run() {
+                //on end of video
+                //TODO: send
+                if (!repeat) {
+                    //playButton.setText(">");
+                    stopRequested = true;
+                    atEndOfMedia = true;
+                }
+            }
+        });
+    }
+
+    public void playPause() {
         MediaPlayer.Status status = mp.getStatus();
 
         if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
@@ -293,13 +288,32 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
     }
 
     @Override
-    public void playContent(String id, int episode, String studio, int startSec) {
-        playPause();
+    public void playContent(int id, int episode, String studio, int startSec) {
+        // создаем медиаплеер
+        mEkId = id;
+        mEpId = episode;
+        int index = id % CONTENT.length;
+        String content = CONTENT[index];
+        mContentTitle = CONTENT_TITLE[index];
+
+        Media media = new Media(content);
+        mp = new MediaPlayer(media);
+        mp.setAutoPlay(true);
+        mMediaView.setMediaPlayer(mp);
     }
 
     @Override
-    public void playStream(String idStream, int startSec) {
-        playPause();
+    public void playStream(int idStream, int startSec) {
+        // создаем медиаплеер
+        mIdStream = idStream;
+        int index = idStream % CONTENT.length;
+        String content = CONTENT[index];
+        mContentTitle = CONTENT_TITLE[index];
+
+        Media media = new Media(content);
+        mp = new MediaPlayer(media);
+        mp.setAutoPlay(true);
+        mMediaView.setMediaPlayer(mp);
     }
 
     @Override
@@ -332,7 +346,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
         } else if (method.equals("Player.playContent")) {
             try {
                 //TODO: check token
-                String id = (String) params.get(0);
+                int id = (int) ((long) params.get(0));
                 int episode = (int) ((long) params.get(1));
                 String studio = (String) params.get(2);
                 int startSec = (int) ((long) params.get(3));
@@ -346,8 +360,8 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
         } else if (method.equals("Player.playStream")) {
             try {
                 //TODO: check token
-                String id = (String) params.get(0);
-                int startSec = (int)((long) params.get(3));
+                int id = (int) ((long) params.get(0));
+                int startSec = (int) ((long) params.get(1));
                 playStream(id, startSec);
                 return new JSONRPC2Response("", jsonrpc2Request.getID());
 

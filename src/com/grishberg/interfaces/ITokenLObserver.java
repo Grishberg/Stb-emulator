@@ -5,4 +5,5 @@ package com.grishberg.interfaces;
  */
 public interface ITokenLObserver {
     String getLastToken();
+    void registerDevice();
 }

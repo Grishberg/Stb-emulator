@@ -32,6 +32,7 @@ public class Pairing implements RequestHandler, IPairing {
         if (token == null) return "";
         Profile profile = new Profile(id, name);
         mTokens.put(token, profile);
+        mTokenObserver.registerDevice();
         return "";
     }
 
