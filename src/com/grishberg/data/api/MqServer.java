@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by g on 13.08.15.
@@ -33,7 +34,9 @@ public class MqServer {
     private Thread mPublishThread;
     private Thread mSubscribeThread;
     private BlockingDeque mOutMessagesQueue;
-
+    volatile private boolean mConnected;
+    private Connection mConnection;
+    private Channel mChannel;
     private List<String> mDevicesQueues;
     private IMqObserver mMqObserver;
 
@@ -59,7 +62,8 @@ public class MqServer {
         try {
             mConnectionFactory.setAutomaticRecoveryEnabled(false);
             mConnectionFactory.setUri("amqp://" + uri);
-        } catch (KeyManagementException | NoSuchAlgorithmException | URISyntaxException e1) {
+            reconnect();
+        } catch (Exception e1) {
             e1.printStackTrace();
         }
     }
@@ -75,31 +79,43 @@ public class MqServer {
     /**
      * start publishing thread
      */
+    private void reconnect() throws IOException, TimeoutException{
+        if(! mConnected ) {
+            mConnection = mConnectionFactory.newConnection();
+            mChannel = mConnection.createChannel();
+            mConnected = true;
+        }
+    }
+
+    private void publishMessage(MqOutMessage mqOutMessage) throws IOException{
+            String corrId = mqOutMessage.getCorrId();
+            String routingKey = mqOutMessage.getClientQueueName();
+            AMQP.BasicProperties props = new AMQP.BasicProperties
+                    .Builder()
+                    .correlationId(corrId)
+                            //.appId(mqOutMessage.getToken())
+                            //.replyTo(mqOutMessage.getClientQueueName())
+                    .build();
+            mChannel.basicPublish("", routingKey, props,
+                    mqOutMessage.getMessage().getBytes());
+            System.out.println("[s] " + mqOutMessage.getMessage());
+            //mChannel.basicAck(mqOutMessage.getDeliveryTag(), false);
+            //channel.waitForConfirmsOrDie();
+    }
+
+    // send notifications
     private void initPublishToAMQP() {
         mPublishThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while (true) {
                     try {
-                        Connection connection = mConnectionFactory.newConnection();
-                        Channel channel = connection.createChannel();
-                        channel.confirmSelect();
+                        reconnect();
+                        //channel.confirmSelect();
                         while (true) {
                             MqOutMessage mqOutMessage = (MqOutMessage) mOutMessagesQueue.takeFirst();
                             try {
-                                String corrId = mqOutMessage.getCorrId();
-                                String routingKey = mqOutMessage.getClientQueueName();
-                                AMQP.BasicProperties props = new AMQP.BasicProperties
-                                        .Builder()
-                                        .correlationId(corrId)
-                                                //.appId(mqOutMessage.getToken())
-                                                //.replyTo(mqOutMessage.getClientQueueName())
-                                        .build();
-                                channel.basicPublish("", routingKey, props,
-                                        mqOutMessage.getMessage().getBytes());
-                                System.out.println("[s] " + mqOutMessage.getMessage());
-                                channel.basicAck(mqOutMessage.getDeliveryTag(), false);
-                                //channel.waitForConfirmsOrDie();
+                                publishMessage(mqOutMessage);
                             } catch (Exception e) {
                                 System.out.println("[f] " + mqOutMessage.getMessage());
                                 mOutMessagesQueue.putFirst(mqOutMessage);
@@ -109,7 +125,8 @@ public class MqServer {
                     } catch (InterruptedException e) {
                         break;
                     } catch (Exception e) {
-                        System.out.println("Connection broken: ");
+                        mConnected = false;
+                        System.out.println("publish thred Connection broken: " + e.toString());
                         try {
                             Thread.sleep(5000); //sleep and then try again
                         } catch (InterruptedException e1) {
@@ -130,28 +147,24 @@ public class MqServer {
             @Override
             public void run() {
                 while (true) {
-                    Connection connection = null;
-                    Channel channel = null;
                     try {
-                        connection = mConnectionFactory.newConnection();
-                        channel = connection.createChannel();
-                        channel.exchangeDeclare(mExchange, "direct");
+                        reconnect();
+                        mChannel.exchangeDeclare(mExchange, "direct");
 
                         // создаем очередь для поступающих от МП сообщений
-                        AMQP.Queue.DeclareOk serverQueue = channel.queueDeclare(mMac, false, false, true, null);
+                        AMQP.Queue.DeclareOk serverQueue = mChannel.queueDeclare(mMac, false, false, true, null);
 
                         // забиндиться к очереди
-                        AMQP.Queue.BindOk bindStatus = channel.queueBind(serverQueue.getQueue(), mExchange, mMac);
+                        AMQP.Queue.BindOk bindStatus = mChannel.queueBind(serverQueue.getQueue(), mExchange, mMac);
 
                         //sync consume
-                        QueueingConsumer consumer = new QueueingConsumer(channel);
-                        channel.basicConsume(serverQueue.getQueue(), true, consumer);
+                        QueueingConsumer consumer = new QueueingConsumer(mChannel);
+                        mChannel.basicConsume(serverQueue.getQueue(), true, consumer);
 
                         // отправить сообщение об успешной операции
                         if (mMqObserver != null) {
                             mMqObserver.onBoundOk();
                         }
-
 
                         while (true) {
                             //ожидаем входящее сообщение
@@ -164,12 +177,11 @@ public class MqServer {
                                 String replyQueueName = delivery.getProperties().getReplyTo();
                                 JSONRPC2Response response = mMqObserver.onMessage(replyQueueName, message);
                                 if (response != null) {
-                                    sendMqMessage(new MqOutMessage(
-                                                    replyQueueName
-                                                    , response.toJSONString()
-                                                    , delivery.getProperties().getCorrelationId()
-                                                    , delivery.getEnvelope().getDeliveryTag())
-                                    );
+                                    publishMessage(new MqOutMessage(
+                                            replyQueueName
+                                            , response.toJSONString()
+                                            , delivery.getProperties().getCorrelationId()
+                                            , delivery.getEnvelope().getDeliveryTag()));
                                 }
                             }
                         }
@@ -177,7 +189,8 @@ public class MqServer {
                         break;
 
                     } catch (Exception e1) {
-                        System.out.println("Connection broken: ");
+                        System.out.println("subscibe Connection broken");
+                        mConnected = false;
                         try {
                             Thread.sleep(5000); //sleep and then try again
                         } catch (InterruptedException e) {
@@ -185,6 +198,7 @@ public class MqServer {
                         }
                     }
                 }
+
             }
         });
         mSubscribeThread.start();

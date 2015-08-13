@@ -30,7 +30,7 @@ public class Main extends Application implements Stb.IOnRegisteredObserver {
         BorderPane rootPane = new BorderPane();
         rootPane.setCenter(mStb.getMediaPlayer());
 
-        // Add Time label
+        // Add secret code label
         mSecretCodeLabel = new Label("Secret code: ");
         mSecretCodeLabel.setFont(new Font("Cambria", 32));
 

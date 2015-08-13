@@ -56,7 +56,7 @@ public class Player extends BorderPane implements IPlayer, RequestHandler {
     private IPairing mPairing;
 
     private static final String[] CONTENT = {
-            "file:/home/g/Видео/test.flv"
+            "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8"
     };
     private static final String[] CONTENT_TITLE = {
             "test"
