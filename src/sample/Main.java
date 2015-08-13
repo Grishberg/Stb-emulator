@@ -6,15 +6,16 @@ import com.grishberg.stb.Stb;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.stage.Stage;
 
 public class Main extends Application implements Stb.IOnRegisteredObserver {
     private Stb mStb;
-    private Input mInput;
-    private Player mPlayer;
+    private Label mSecretCodeLabel;
 
     @Override
     public void start(Stage primaryStage) {
@@ -24,9 +25,14 @@ public class Main extends Application implements Stb.IOnRegisteredObserver {
 
         mStb = new Stb(this);
 
-        BorderPane root = new BorderPane();
+        BorderPane rootPane = new BorderPane();
+        rootPane.setCenter(mStb.getMediaPlayer());
 
-        scene.setRoot(mStb.getMediaPlayer());
+        // Add Time label
+        mSecretCodeLabel = new Label("Secret code: ");
+
+        rootPane.setBottom(mSecretCodeLabel);
+        scene.setRoot(rootPane);
         mStb.start();
         primaryStage.setScene(scene);
         primaryStage.show();
