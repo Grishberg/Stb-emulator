@@ -32,11 +32,12 @@ public class Player implements IPlayer, RequestHandler {
     private static final String COMMAND_GET_STATUS = "Player.getStatus";
 
     private static final String NOTIFY_END_PLAYING = "onPlayEndNotify";
+    private static final String NOTIFY_ERROR = "onErrorNotify";
     private static final String NOTIFY_START_PLAYING = "onStartPlaying";
     private static final int SEEK_DURATION_SEC = 30;
 
     public enum PlayerState {
-        NONE, PLAYING, PAUSED, STOPPED, BUFFERISATION
+        NONE, PLAYING, PAUSED, STOPPED, BUFFERING, ERROR, READY, ENDPLAYING
     }
 
     private MediaPlayer mp;
@@ -58,14 +59,20 @@ public class Player implements IPlayer, RequestHandler {
     private IView mView;
     private boolean mIsRightPositionChanged;
     private boolean mIsLeftPositionChanged;
+    private Map<String, Object> mResult;
 
-
+    /**
+     * test media content
+     */
     private static final String[] CONTENT = {
             "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8"
             , "http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8"
             , "http://vevoplaylist-live.hls.adaptive.level3.net/vevo/ch1/appleman.m3u8"
             , "http://srv6.zoeweb.tv:1935/z330-live/stream/playlist.m3u8"
     };
+    /**
+     * media content title
+     */
     private static final String[] CONTENT_TITLE = {
             "jobs"
             , "bip bop"
@@ -79,6 +86,31 @@ public class Player implements IPlayer, RequestHandler {
         mPlayerObserver = playerObserver;
     }
 
+    /**
+     * send notifications to IView and if need to mobile device
+     */
+    private void onStateChanged() {
+        mView.onChangedState(mState);
+        JSONRPC2Notification notification = null;
+        switch (mState){
+            case PLAYING:
+                notification = new JSONRPC2Notification(NOTIFY_START_PLAYING);
+                break;
+            case ENDPLAYING:
+                notification = new JSONRPC2Notification(NOTIFY_END_PLAYING);
+                break;
+            case ERROR:
+                notification =new JSONRPC2Notification(NOTIFY_ERROR);
+                break;
+        }
+        if(notification != null) {
+            mPlayerObserver.onNotify(notification.toJSONString());
+        }
+    }
+
+    /**
+     * create and setup MediaPlayer
+     */
     private void initMediaPlayer() {
         mp.currentTimeProperty().addListener(new InvalidationListener() {
             public void invalidated(Observable ov) {
@@ -97,14 +129,14 @@ public class Player implements IPlayer, RequestHandler {
                 } else {
                     mState = PlayerState.PLAYING;
                 }
+                onStateChanged();
             }
         });
-
         mp.setOnPaused(new Runnable() {
             public void run() {
                 System.out.println("onPaused");
                 mState = PlayerState.PAUSED;
-                mView.onChangedState(mState);
+                onStateChanged();
             }
         });
 
@@ -112,6 +144,8 @@ public class Player implements IPlayer, RequestHandler {
             public void run() {
                 System.out.println("----------Player onReady");
                 mDuration = mp.getMedia().getDuration();
+                mState = PlayerState.READY;
+                onStateChanged();
                 updateValues();
                 mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_START_PLAYING).toJSONString());
             }
@@ -120,30 +154,19 @@ public class Player implements IPlayer, RequestHandler {
             @Override
             public void run() {
                 System.out.println("----------Player onStopped");
-            }
-        });
-        mp.errorProperty().addListener(new ChangeListener<MediaException>() {
-            @Override
-            public void changed(ObservableValue<? extends MediaException> observable
-                    , MediaException oldValue, MediaException newValue) {
-                System.out.println("----------Player on error " + newValue);
+                mState = PlayerState.STOPPED;
+                onStateChanged();
             }
         });
         mp.setOnError(new Runnable() {
             @Override
             public void run() {
                 System.out.println("----------Player on error");
+                mState = PlayerState.ERROR;
+                onStateChanged();
             }
         });
 
-        mp.bufferProgressTimeProperty().addListener(new ChangeListener<Duration>() {
-            @Override
-            public void changed(ObservableValue<? extends Duration> observable
-                    , Duration oldValue
-                    , Duration newValue) {
-                System.out.println("----------Player bufferProgress " + newValue);
-            }
-        });
         mp.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
         mp.setOnEndOfMedia(new Runnable() {
             public void run() {
@@ -152,11 +175,8 @@ public class Player implements IPlayer, RequestHandler {
                 System.out.println("----------Player on end of media");
                 stopRequested = true;
                 atEndOfMedia = true;
-                mState = PlayerState.STOPPED;
-                if (mPlayerObserver != null) {
-                    mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_END_PLAYING).toJSONString());
-                }
-                mView.onChangedState(mState);
+                mState = PlayerState.ENDPLAYING;
+                onStateChanged();
             }
         });
         mp.statusProperty().addListener(new ChangeListener<MediaPlayer.Status>() {
@@ -168,10 +188,14 @@ public class Player implements IPlayer, RequestHandler {
         });
     }
 
+    public void fullscreen(){
+        //mView.onFullscreen();
+    }
+
     public void left() {
         if (mp == null) return;
-        mState = PlayerState.BUFFERISATION;
         mIsLeftPositionChanged = true;
+        mState = PlayerState.BUFFERING;
         mCurrentPosition = mCurrentPosition.add(Duration.seconds(-SEEK_DURATION_SEC));
         if (mCurrentPosition.lessThan(Duration.seconds(0))) {
             mCurrentPosition = Duration.seconds(0);
@@ -182,7 +206,7 @@ public class Player implements IPlayer, RequestHandler {
     public void right() {
         if (mp == null) return;
         mIsRightPositionChanged = true;
-
+        mState = PlayerState.BUFFERING;
         mCurrentPosition = mCurrentPosition.add(Duration.seconds(SEEK_DURATION_SEC));
         if (mCurrentPosition.greaterThan(mDuration)) {
             mCurrentPosition = mDuration;
@@ -245,16 +269,25 @@ public class Player implements IPlayer, RequestHandler {
         }
     }
 
+    /**
+     * update time line
+     */
     protected void updateValues() {
         Platform.runLater(new Runnable() {
             public void run() {
                 Duration currentTime = mp.getCurrentTime();
                 if (mIsRightPositionChanged && currentTime.greaterThan(mCurrentPosition)) {
                     mIsRightPositionChanged = false;
+                    mState = PlayerState.PLAYING;
+                    onStateChanged();
+                }
+                if (mIsLeftPositionChanged) {
+                    mIsLeftPositionChanged = false;
+                    mState = PlayerState.PLAYING;
+                    onStateChanged();
                 }
                 if (mIsRightPositionChanged == false) {
                     mCurrentPosition = currentTime;
-                    mState = PlayerState.PLAYING;
                 }
 
                 double position = -1;
@@ -269,7 +302,7 @@ public class Player implements IPlayer, RequestHandler {
 
     @Override
     public void playContent(int id, int episode, String studio, int startSec) {
-        // создаем медиаплеер
+
         mEkId = id;
         mEpId = episode;
         int index = id % CONTENT.length;
@@ -285,7 +318,6 @@ public class Player implements IPlayer, RequestHandler {
 
     @Override
     public void playStream(int idStream, int startSec) {
-        // создаем медиаплеер
         mIdStream = idStream;
         int index = idStream % CONTENT.length;
         String content = CONTENT[index];
@@ -308,6 +340,12 @@ public class Player implements IPlayer, RequestHandler {
         return result;
     }
 
+    /**
+     * get formatted time
+     * @param elapsed
+     * @param duration
+     * @return
+     */
     private static String formatTime(Duration elapsed, Duration duration) {
         int intElapsed = (int) Math.floor(elapsed.toSeconds());
         int elapsedHours = intElapsed / (60 * 60);
@@ -360,13 +398,15 @@ public class Player implements IPlayer, RequestHandler {
 
     @Override
     public JSONRPC2Response process(JSONRPC2Request jsonrpc2Request, MessageContext messageContext) {
+        mResult = null;
         List params = (List) jsonrpc2Request.getParams();
         String token = null;
         int id;
         int startSec;
         switch (jsonrpc2Request.getMethod()) {
             case COMMAND_GET_STATUS:
-                return new JSONRPC2Response(getStatus(), jsonrpc2Request.getID());
+                mResult = getStatus();
+                break;
             case COMMAND_PLAY_CONTENT:
                 //TODO: check token
                 id = (int) ((long) params.get(0));
@@ -374,16 +414,17 @@ public class Player implements IPlayer, RequestHandler {
                 String studio = (String) params.get(2);
                 startSec = (int) ((long) params.get(3));
                 playContent(id, episode, studio, startSec);
-                return new JSONRPC2Response("", jsonrpc2Request.getID());
+                break;
 
             case COMMAND_PLAY_STREAM:
                 //TODO: check token
                 id = (int) ((long) params.get(0));
                 startSec = (int) ((long) params.get(1));
                 playStream(id, startSec);
-                return new JSONRPC2Response("", jsonrpc2Request.getID());
+                break;
             default:
                 return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, jsonrpc2Request.getID());
         }
+        return new JSONRPC2Response(mResult, jsonrpc2Request.getID());
     }
 }
