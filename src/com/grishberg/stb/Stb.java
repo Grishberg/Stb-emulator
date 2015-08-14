@@ -9,6 +9,7 @@ import com.grishberg.data.model.PairingInfo;
 import com.grishberg.data.rest.RestConst;
 import com.grishberg.interfaces.IPlayerObserver;
 import com.grishberg.interfaces.ITokenLObserver;
+import com.grishberg.interfaces.IView;
 import com.grishberg.interfaces.LinkingPolicyService;
 
 // The JSON-RPC 2.0 server framework package
@@ -21,7 +22,6 @@ import retrofit.client.Response;
 import retrofit.converter.GsonConverter;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.zip.CRC32;
@@ -45,15 +45,15 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserve
     private MqServer mMqServer;
     private String mHost;
     private String mToken;
-    private IOnRegisteredObserver mRegisteredObserver;
+    private IView mView;
     private String mLastQueueName;
     private String mLastCorrId;
 
-    public Stb(IOnRegisteredObserver observer) {
+    public Stb(IView view) {
         mMac = generateMac();
         mId = generateId();
         mPairing = new Pairing(this);
-        mPlayer = new Player(mPairing, this);
+        mPlayer = new Player(view,mPairing, this);
         mInput = new Input(mPlayer, mPairing);
         mToken = null;
         mPolicyService = buildRestAdapter().create(LinkingPolicyService.class);
@@ -61,7 +61,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserve
         mDispatcher.register(mInput);
         mDispatcher.register(mPlayer);
         mDispatcher.register(mPairing);
-        mRegisteredObserver = observer;
+        mView = view;
     }
 
     public Player getMediaPlayer() {
@@ -116,8 +116,8 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserve
             public void success(Response response, Response response2) {
                 System.out.println("registered, mac = " + mMac);
                 mToken = token;
-                if (mRegisteredObserver != null) {
-                    mRegisteredObserver.onRegistered(mKey);
+                if (mView != null) {
+                    mView.onRegistered(mKey);
                 }
             }
 
@@ -155,8 +155,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserve
 
     @Override
     public void onNotify(String msg) {
-        mMqServer.sendMqMessage(new MqOutMessage(mLastQueueName,mLastCorrId
-                ,msg));
+        //mMqServer.sendMqMessage(new MqOutMessage(mLastQueueName,mLastCorrId ,msg));
     }
 
     public static String getMqAddress(List<String> addresses, String mac) {
@@ -223,9 +222,5 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserve
 
     private static String generateToken() {
         return java.util.UUID.randomUUID().toString();
-    }
-
-    public interface IOnRegisteredObserver {
-        void onRegistered(String secretKey);
     }
 }

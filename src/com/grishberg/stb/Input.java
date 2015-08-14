@@ -81,12 +81,12 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public void volumeUp() {
-
+        mPlayer.volumeUp();
     }
 
     @Override
     public void volumeDown() {
-
+        mPlayer.volumeDown();
     }
 
     @Override
