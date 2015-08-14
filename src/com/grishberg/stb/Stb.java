@@ -31,7 +31,7 @@ import com.grishberg.framework.*;
 /**
  * Created by g on 13.08.15.
  */
-public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserver {
+public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserver {
 
     private static final String TAG = Stb.class.getSimpleName();
     private String mId = "01234567890";
@@ -53,7 +53,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserve
         mMac = generateMac();
         mId = generateId();
         mPairing = new Pairing(this);
-        mPlayer = new Player(view,mPairing, this);
+        mPlayer = new Player(view, mPairing, this);
         mInput = new Input(mPlayer, mPairing);
         mToken = null;
         mPolicyService = buildRestAdapter().create(LinkingPolicyService.class);
@@ -64,12 +64,8 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserve
         mView = view;
     }
 
-    public Player getMediaPlayer() {
-        return mPlayer;
-    }
-
-    public void release(){
-        if(mMqServer != null){
+    public void release() {
+        if (mMqServer != null) {
             mMqServer.release();
         }
     }
@@ -155,7 +151,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver,IPlayerObserve
 
     @Override
     public void onNotify(String msg) {
-        //mMqServer.sendMqMessage(new MqOutMessage(mLastQueueName,mLastCorrId ,msg));
+        mMqServer.sendMqMessage(new MqOutMessage(mLastQueueName, msg, mLastCorrId));
     }
 
     public static String getMqAddress(List<String> addresses, String mac) {

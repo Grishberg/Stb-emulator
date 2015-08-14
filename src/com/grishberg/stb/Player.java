@@ -32,11 +32,12 @@ public class Player implements IPlayer, RequestHandler {
     private static final String COMMAND_GET_STATUS = "Player.getStatus";
 
     private static final String NOTIFY_END_PLAYING = "onPlayEndNotify";
+    private static final String NOTIFY_ERROR = "onErrorNotify";
     private static final String NOTIFY_START_PLAYING = "onStartPlaying";
     private static final int SEEK_DURATION_SEC = 30;
 
     public enum PlayerState {
-        NONE, PLAYING, PAUSED, STOPPED, BUFFERING, ERROR, READY
+        NONE, PLAYING, PAUSED, STOPPED, BUFFERING, ERROR, READY, ENDPLAYING
     }
 
     private MediaPlayer mp;
@@ -85,6 +86,31 @@ public class Player implements IPlayer, RequestHandler {
         mPlayerObserver = playerObserver;
     }
 
+    /**
+     * send notifications to IView and if need to mobile device
+     */
+    private void onStateChanged() {
+        mView.onChangedState(mState);
+        JSONRPC2Notification notification = null;
+        switch (mState){
+            case PLAYING:
+                notification = new JSONRPC2Notification(NOTIFY_START_PLAYING);
+                break;
+            case ENDPLAYING:
+                notification = new JSONRPC2Notification(NOTIFY_END_PLAYING);
+                break;
+            case ERROR:
+                notification =new JSONRPC2Notification(NOTIFY_ERROR);
+                break;
+        }
+        if(notification != null) {
+            mPlayerObserver.onNotify(notification.toJSONString());
+        }
+    }
+
+    /**
+     * create and setup MediaPlayer
+     */
     private void initMediaPlayer() {
         mp.currentTimeProperty().addListener(new InvalidationListener() {
             public void invalidated(Observable ov) {
@@ -149,11 +175,8 @@ public class Player implements IPlayer, RequestHandler {
                 System.out.println("----------Player on end of media");
                 stopRequested = true;
                 atEndOfMedia = true;
-                mState = PlayerState.STOPPED;
-                if (mPlayerObserver != null) {
-                    mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_END_PLAYING).toJSONString());
-                }
-                mView.onChangedState(mState);
+                mState = PlayerState.ENDPLAYING;
+                onStateChanged();
             }
         });
         mp.statusProperty().addListener(new ChangeListener<MediaPlayer.Status>() {
@@ -311,10 +334,6 @@ public class Player implements IPlayer, RequestHandler {
         result.put(RestConst.field.EK_TITLE, mContentTitle);
         result.put(RestConst.field.STATE, mState.ordinal());
         return result;
-    }
-
-    private void onStateChanged() {
-        mView.onChangedState(mState);
     }
 
     /**

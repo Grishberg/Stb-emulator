@@ -93,8 +93,6 @@ public class MqServer {
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
                 .correlationId(corrId)
-                        //.appId(mqOutMessage.getToken())
-                        //.replyTo(mqOutMessage.getClientQueueName())
                 .build();
         mChannel.basicPublish("", routingKey, props,
                 mqOutMessage.getMessage().getBytes());
