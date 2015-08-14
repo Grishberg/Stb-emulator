@@ -14,6 +14,8 @@ import com.thetransactioncompany.jsonrpc2.server.RequestHandler;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.media.*;
 import javafx.util.Duration;
 
@@ -31,10 +33,10 @@ public class Player implements IPlayer, RequestHandler {
 
     private static final String NOTIFY_END_PLAYING = "onPlayEndNotify";
     private static final String NOTIFY_START_PLAYING = "onStartPlaying";
-    private static final int SEEK_DURATION_SEC = 5;
+    private static final int SEEK_DURATION_SEC = 30;
 
     public enum PlayerState {
-        NONE, PLAYING, PAUSED, STOPPED
+        NONE, PLAYING, PAUSED, STOPPED, STALLED
     }
 
     private MediaPlayer mp;
@@ -42,7 +44,7 @@ public class Player implements IPlayer, RequestHandler {
     private boolean stopRequested = false;
     private boolean atEndOfMedia = false;
     private Duration mDuration;
-    private Duration mCurrentDuration;
+    private Duration mCurrentPosition;
     private PlayerState mState = PlayerState.NONE;
     private String mContentTitle;
     private int mEkId;
@@ -54,6 +56,8 @@ public class Player implements IPlayer, RequestHandler {
     private double mPrevVolume = mVolume;
     private double mVolumeDelta = 5;
     private IView mView;
+    private boolean mIsRightPositionChanged;
+    private boolean mIsLeftPositionChanged;
 
 
     private static final String[] CONTENT = {
@@ -81,6 +85,7 @@ public class Player implements IPlayer, RequestHandler {
                 updateValues();
             }
         });
+
         mp.setVolume(mVolume / 100.0);
         mView.onChangedVolume(mVolume);
         mp.setOnPlaying(new Runnable() {
@@ -91,7 +96,6 @@ public class Player implements IPlayer, RequestHandler {
                     stopRequested = false;
                 } else {
                     mState = PlayerState.PLAYING;
-                    //playButton.setText("||");
                 }
             }
         });
@@ -106,40 +110,91 @@ public class Player implements IPlayer, RequestHandler {
 
         mp.setOnReady(new Runnable() {
             public void run() {
+                System.out.println("----------Player onReady");
                 mDuration = mp.getMedia().getDuration();
                 updateValues();
                 mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_START_PLAYING).toJSONString());
             }
         });
+        mp.setOnStopped(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("----------Player onStopped");
+            }
+        });
+        mp.errorProperty().addListener(new ChangeListener<MediaException>() {
+            @Override
+            public void changed(ObservableValue<? extends MediaException> observable
+                    , MediaException oldValue, MediaException newValue) {
+                System.out.println("----------Player on error " + newValue);
+            }
+        });
+        mp.setOnError(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("----------Player on error");
+            }
+        });
+        mp.setOnStalled(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("----------Player on stalled");
+                mState = PlayerState.STALLED;
+            }
+        });
 
+        mp.bufferProgressTimeProperty().addListener(new ChangeListener<Duration>() {
+            @Override
+            public void changed(ObservableValue<? extends Duration> observable
+                    , Duration oldValue
+                    , Duration newValue) {
+                System.out.println("----------Player bufferProgress " + newValue);
+            }
+        });
         mp.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
         mp.setOnEndOfMedia(new Runnable() {
             public void run() {
                 //on end of video
                 //TODO: send
-                if (!repeat) {
-                    stopRequested = true;
-                    atEndOfMedia = true;
-                    mState = PlayerState.STOPPED;
-                    if (mPlayerObserver != null) {
-                        mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_END_PLAYING).toJSONString());
-                    }
-                    mView.onChangedState(mState);
+                System.out.println("----------Player on end of media");
+                stopRequested = true;
+                atEndOfMedia = true;
+                mState = PlayerState.STOPPED;
+                if (mPlayerObserver != null) {
+                    mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_END_PLAYING).toJSONString());
                 }
+                mView.onChangedState(mState);
+            }
+        });
+        mp.statusProperty().addListener(new ChangeListener<MediaPlayer.Status>() {
+            @Override
+            public void changed(ObservableValue<? extends MediaPlayer.Status> observable
+                    , MediaPlayer.Status oldValue, MediaPlayer.Status newValue) {
+                System.out.println("----------Player status changed value=" + newValue);
             }
         });
     }
 
     public void left() {
         if (mp == null) return;
-        Duration newPosition = mCurrentDuration.add(Duration.seconds(-SEEK_DURATION_SEC));
-        mp.seek(newPosition);
+        mIsLeftPositionChanged = true;
+        mCurrentPosition = mp.getCurrentTime().add(Duration.seconds(-SEEK_DURATION_SEC));
+        if (mCurrentPosition.lessThan(Duration.seconds(0))) {
+            mCurrentPosition = Duration.seconds(0);
+        }
+        mp.seek(mCurrentPosition);
     }
 
     public void right() {
         if (mp == null) return;
-        Duration newPosition = mCurrentDuration.add(Duration.seconds(SEEK_DURATION_SEC));
-        mp.seek(newPosition);
+        mIsRightPositionChanged = true;
+
+        mCurrentPosition = mCurrentPosition.add(Duration.seconds(SEEK_DURATION_SEC));
+        if (mCurrentPosition.greaterThan(mDuration)) {
+            mCurrentPosition = mDuration;
+        }
+        System.out.println("pos = " + mCurrentPosition.toSeconds());
+        mp.seek(mCurrentPosition);
     }
 
     public void mute() {
@@ -199,17 +254,25 @@ public class Player implements IPlayer, RequestHandler {
     protected void updateValues() {
         Platform.runLater(new Runnable() {
             public void run() {
-                mCurrentDuration = mp.getCurrentTime();
+                Duration currentTime = mp.getCurrentTime();
+                if (mIsRightPositionChanged && currentTime.greaterThan(mCurrentPosition)) {
+                    mIsRightPositionChanged = false;
+                } else if (mIsLeftPositionChanged && currentTime.lessThanOrEqualTo(mCurrentPosition)) {
+                    mIsLeftPositionChanged = false;
+                }
+                if(mIsLeftPositionChanged == false && mIsRightPositionChanged == false){
+                    mCurrentPosition = currentTime;
+                }
+
                 double position = -1;
                 if (!mDuration.isUnknown()) {
-                    position = mCurrentDuration.divide(mDuration).toMillis() * 100.0;
+                    position = mCurrentPosition.divide(mDuration).toMillis() * 100.0;
                 }
-                String timeCaption = formatTime(mCurrentDuration, mDuration);
+                String timeCaption = formatTime(mCurrentPosition, mDuration);
                 mView.onChangedTimePosition(position, timeCaption);
             }
         });
     }
-
 
     @Override
     public void playContent(int id, int episode, String studio, int startSec) {
@@ -324,6 +387,5 @@ public class Player implements IPlayer, RequestHandler {
             default:
                 return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, jsonrpc2Request.getID());
         }
-        //return new JSONRPC2Response(new JSONRPC2Error(-1, "error"), jsonrpc2Request.getID());
     }
 }
