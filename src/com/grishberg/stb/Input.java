@@ -61,12 +61,12 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public void left() {
-
+        mPlayer.left();
     }
 
     @Override
     public void right() {
-
+        mPlayer.right();
     }
 
     @Override
@@ -101,7 +101,7 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public void mute() {
-
+        mPlayer.mute();
     }
 
     @Override
