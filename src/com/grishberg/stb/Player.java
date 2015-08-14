@@ -18,7 +18,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.media.*;
 import javafx.util.Duration;
-
 import javafx.scene.media.MediaPlayer;
 
 import java.util.HashMap;
@@ -26,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 
 public class Player implements IPlayer, RequestHandler {
-
     private static final String COMMAND_PLAY_STREAM = "Player.playStream";
     private static final String COMMAND_PLAY_CONTENT = "Player.playContent";
     private static final String COMMAND_GET_STATUS = "Player.getStatus";
@@ -34,6 +32,7 @@ public class Player implements IPlayer, RequestHandler {
     private static final String NOTIFY_END_PLAYING = "onPlayEndNotify";
     private static final String NOTIFY_ERROR = "onErrorNotify";
     private static final String NOTIFY_START_PLAYING = "onStartPlaying";
+
     private static final int SEEK_DURATION_SEC = 30;
 
     public enum PlayerState {
@@ -46,6 +45,8 @@ public class Player implements IPlayer, RequestHandler {
     private boolean atEndOfMedia = false;
     private Duration mDuration;
     private Duration mCurrentPosition;
+    private int mDurationSeconds;
+    private int mPositionSeconds;
     private PlayerState mState = PlayerState.NONE;
     private String mContentTitle;
     private int mEkId;
@@ -60,7 +61,6 @@ public class Player implements IPlayer, RequestHandler {
     private boolean mIsRightPositionChanged;
     private boolean mIsLeftPositionChanged;
     private Map<String, Object> mResult;
-
     /**
      * test media content
      */
@@ -90,7 +90,7 @@ public class Player implements IPlayer, RequestHandler {
     private void onStateChanged() {
         mView.onChangedState(mState);
         JSONRPC2Notification notification = null;
-        switch (mState){
+        switch (mState) {
             case PLAYING:
                 notification = new JSONRPC2Notification(NOTIFY_START_PLAYING);
                 break;
@@ -98,10 +98,10 @@ public class Player implements IPlayer, RequestHandler {
                 notification = new JSONRPC2Notification(NOTIFY_END_PLAYING);
                 break;
             case ERROR:
-                notification =new JSONRPC2Notification(NOTIFY_ERROR);
+                notification = new JSONRPC2Notification(NOTIFY_ERROR);
                 break;
         }
-        if(notification != null) {
+        if (notification != null) {
             mPlayerObserver.onNotify(notification.toJSONString());
         }
     }
@@ -142,10 +142,10 @@ public class Player implements IPlayer, RequestHandler {
             public void run() {
                 System.out.println("----------Player onReady");
                 mDuration = mp.getMedia().getDuration();
+                mDurationSeconds = (int) mDuration.toSeconds();
                 mState = PlayerState.READY;
                 onStateChanged();
                 updateValues();
-                mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_START_PLAYING).toJSONString());
             }
         });
         mp.setOnStopped(new Runnable() {
@@ -336,6 +336,7 @@ public class Player implements IPlayer, RequestHandler {
 
     /**
      * get formatted time
+     *
      * @param elapsed
      * @param duration
      * @return
@@ -389,7 +390,6 @@ public class Player implements IPlayer, RequestHandler {
         mView.onFullScreen();
     }
 
-
     @Override
     public JSONRPC2Response process(JSONRPC2Request jsonrpc2Request, MessageContext messageContext) {
         mResult = null;
@@ -404,7 +404,7 @@ public class Player implements IPlayer, RequestHandler {
             case COMMAND_PLAY_CONTENT:
                 //TODO: check token
                 id = Math.abs((int) ((long) params.get(0)));
-                int episode = Math.abs( (int) ((long) params.get(1)) );
+                int episode = Math.abs((int) ((long) params.get(1)));
                 String studio = (String) params.get(2);
                 startSec = (int) ((long) params.get(3));
                 playContent(id, episode, studio, startSec);
@@ -412,8 +412,8 @@ public class Player implements IPlayer, RequestHandler {
 
             case COMMAND_PLAY_STREAM:
                 //TODO: check token
-                id = Math.abs( (int) ((long) params.get(0)) );
-                startSec = Math.abs( (int) ((long) params.get(1)) );
+                id = Math.abs((int) ((long) params.get(0)));
+                startSec = Math.abs((int) ((long) params.get(1)));
                 playStream(id, startSec);
                 break;
             default:
