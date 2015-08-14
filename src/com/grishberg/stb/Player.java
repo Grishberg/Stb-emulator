@@ -36,7 +36,7 @@ public class Player implements IPlayer, RequestHandler {
     private static final int SEEK_DURATION_SEC = 30;
 
     public enum PlayerState {
-        NONE, PLAYING, PAUSED, STOPPED, STALLED
+        NONE, PLAYING, PAUSED, STOPPED, BUFFERISATION
     }
 
     private MediaPlayer mp;
@@ -135,13 +135,6 @@ public class Player implements IPlayer, RequestHandler {
                 System.out.println("----------Player on error");
             }
         });
-        mp.setOnStalled(new Runnable() {
-            @Override
-            public void run() {
-                System.out.println("----------Player on stalled");
-                mState = PlayerState.STALLED;
-            }
-        });
 
         mp.bufferProgressTimeProperty().addListener(new ChangeListener<Duration>() {
             @Override
@@ -177,8 +170,9 @@ public class Player implements IPlayer, RequestHandler {
 
     public void left() {
         if (mp == null) return;
+        mState = PlayerState.BUFFERISATION;
         mIsLeftPositionChanged = true;
-        mCurrentPosition = mp.getCurrentTime().add(Duration.seconds(-SEEK_DURATION_SEC));
+        mCurrentPosition = mCurrentPosition.add(Duration.seconds(-SEEK_DURATION_SEC));
         if (mCurrentPosition.lessThan(Duration.seconds(0))) {
             mCurrentPosition = Duration.seconds(0);
         }
@@ -257,11 +251,10 @@ public class Player implements IPlayer, RequestHandler {
                 Duration currentTime = mp.getCurrentTime();
                 if (mIsRightPositionChanged && currentTime.greaterThan(mCurrentPosition)) {
                     mIsRightPositionChanged = false;
-                } else if (mIsLeftPositionChanged && currentTime.lessThanOrEqualTo(mCurrentPosition)) {
-                    mIsLeftPositionChanged = false;
                 }
-                if(mIsLeftPositionChanged == false && mIsRightPositionChanged == false){
+                if (mIsRightPositionChanged == false) {
                     mCurrentPosition = currentTime;
+                    mState = PlayerState.PLAYING;
                 }
 
                 double position = -1;
