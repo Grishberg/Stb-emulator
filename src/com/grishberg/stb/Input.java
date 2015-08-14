@@ -10,6 +10,7 @@ import com.thetransactioncompany.jsonrpc2.server.RequestHandler;
 
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Created by g on 13.08.15.
@@ -32,7 +33,7 @@ public class Input implements IInput, RequestHandler {
     private final String COMMAND_PREV = "Input.prev";
     private final String COMMAND_NEXT = "Input.next";
     private final String COMMAND_MENU = "Input.menu";
-    private String mResultRPC;
+    private Map<String,Object> mResultRPC;
 
     public Input(Player player, IPairing pairing) {
         mPlayer = player;
@@ -111,7 +112,7 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public void fullscreen() {
-
+        mPlayer.fullscreen();
     }
 
     @Override
@@ -189,6 +190,6 @@ public class Input implements IInput, RequestHandler {
             default:
                 return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, req.getID());
         }
-        return new JSONRPC2Response(mResultRPC, req.getID());
+        return new JSONRPC2Response(mResultRPC);
     }
 }

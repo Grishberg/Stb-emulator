@@ -9,18 +9,17 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
-import javafx.scene.media.Media;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class Main extends Application implements IView {
     private Stb mStb;
@@ -29,8 +28,22 @@ public class Main extends Application implements IView {
     private Label volumeLabel;
     private MediaView mediaView;
 
+    private boolean stopRequested = false;
+    private boolean atEndOfMedia = false;
+    private Duration duration;
+    private Slider timeSlider;
+    private Label playTime;
+    private Slider volumeSlider;
+    private HBox mediaBar;
+    private Stage mPrimaryStage;
+    private boolean isFullScreen =false;
+
+    public Main() {
+    }
+
     @Override
     public void start(Stage primaryStage) {
+        mPrimaryStage = primaryStage;
         primaryStage.setTitle("STB emulator");
         //Group root = new Group();
 
@@ -40,12 +53,13 @@ public class Main extends Application implements IView {
         StackPane.setAlignment(mediaView, Pos.CENTER);
         DoubleProperty width = mediaView.fitWidthProperty();
         DoubleProperty height = mediaView.fitHeightProperty();
-        width.bind(Bindings.selectDouble(mediaView.sceneProperty(), "width"));
-        height.bind(Bindings.selectDouble(mediaView.sceneProperty(), "height"));
+        width.bind(Bindings.selectDouble(mediaView.sceneProperty(), "width").subtract(30));
+        height.bind(Bindings.selectDouble(mediaView.sceneProperty(), "height").subtract(30));
         mediaView.setPreserveRatio(true);
 
         // Add secret code label
         secretCodeLabel = new Label("Secret code: ");
+        makeSelectable(secretCodeLabel);
         secretCodeLabel.setFont(new Font("Cambria", 18));
         secretCodeLabel.setTextFill(Color.web("#0076a3"));
         StackPane.setAlignment(secretCodeLabel, Pos.TOP_CENTER);
@@ -61,19 +75,104 @@ public class Main extends Application implements IView {
         StackPane.setAlignment(volumeLabel, Pos.BOTTOM_LEFT);
 
 
-        StackPane root = new StackPane();
-        root.setStyle("-fx-background-color: #000000;");
+        StackPane rootMedia = new StackPane();
+        rootMedia.setStyle("-fx-background-color: #000000;");
 
-        root.getChildren().add(mediaView);
-        root.getChildren().add(secretCodeLabel);
-        root.getChildren().add(positionLabel);
-        root.getChildren().add(volumeLabel);
+        rootMedia.getChildren().add(mediaView);
+        rootMedia.getChildren().add(secretCodeLabel);
+        rootMedia.getChildren().add(positionLabel);
+        rootMedia.getChildren().add(volumeLabel);
+
+        mediaBar = new HBox();
+        mediaBar.setMinHeight(30);
+        mediaBar.setAlignment(Pos.CENTER);
+        mediaBar.setPadding(new Insets(5, 10, 5, 10));
+        BorderPane.setAlignment(mediaBar, Pos.CENTER);
+
+        // Add spacer
+        Label spacer = new Label("   ");
+        mediaBar.getChildren().add(spacer);
+
+        // Add Time label
+        Label timeLabel = new Label("Time: ");
+        mediaBar.getChildren().add(timeLabel);
+
+        // Add time slider
+        timeSlider = new Slider();
+        HBox.setHgrow(timeSlider, Priority.ALWAYS);
+        timeSlider.setMinWidth(50);
+        timeSlider.setMaxWidth(Double.MAX_VALUE);
+
+        mediaBar.getChildren().add(timeSlider);
+
+        // Add Play label
+        playTime = new Label();
+        playTime.setPrefWidth(130);
+        playTime.setMinWidth(50);
+        mediaBar.getChildren().add(playTime);
+
+        // Add the volume label
+        Label volumeLabel = new Label("Vol: ");
+        mediaBar.getChildren().add(volumeLabel);
+
+        // Add Volume slider
+        volumeSlider = new Slider();
+        volumeSlider.setPrefWidth(70);
+        volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
+        volumeSlider.setMinWidth(30);
+
+        mediaBar.getChildren().add(volumeSlider);
 
         mStb.start();
+
+        VBox root = new VBox();
+        root.setAlignment(Pos.TOP_CENTER);
+        root.getChildren().add(mediaBar);
+        root.getChildren().add(rootMedia);
+
         Scene scene = new Scene(root, 640, 300);
 
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+
+
+    private static String formatTime(Duration elapsed, Duration duration) {
+        int intElapsed = (int) Math.floor(elapsed.toSeconds());
+        int elapsedHours = intElapsed / (60 * 60);
+        if (elapsedHours > 0) {
+            intElapsed -= elapsedHours * 60 * 60;
+        }
+        int elapsedMinutes = intElapsed / 60;
+        int elapsedSeconds = intElapsed - elapsedHours * 60 * 60 - elapsedMinutes
+                * 60;
+
+        if (duration.greaterThan(Duration.ZERO)) {
+            int intDuration = (int) Math.floor(duration.toSeconds());
+            int durationHours = intDuration / (60 * 60);
+            if (durationHours > 0) {
+                intDuration -= durationHours * 60 * 60;
+            }
+            int durationMinutes = intDuration / 60;
+            int durationSeconds = intDuration - durationHours * 60 * 60
+                    - durationMinutes * 60;
+            if (durationHours > 0) {
+                return String.format("%d:%02d:%02d/%d:%02d:%02d", elapsedHours,
+                        elapsedMinutes, elapsedSeconds, durationHours, durationMinutes,
+                        durationSeconds);
+            } else {
+                return String.format("%02d:%02d/%02d:%02d", elapsedMinutes,
+                        elapsedSeconds, durationMinutes, durationSeconds);
+            }
+        } else {
+            if (elapsedHours > 0) {
+                return String.format("%d:%02d:%02d", elapsedHours, elapsedMinutes,
+                        elapsedSeconds);
+            } else {
+                return String.format("%02d:%02d", elapsedMinutes, elapsedSeconds);
+            }
+        }
     }
 
     @Override
@@ -83,7 +182,7 @@ public class Main extends Application implements IView {
     }
 
     @Override
-    public void onChangedTimePosition(double currentPosition, String caption) {
+    public void onChangedTimePosition(final double currentPosition, final String caption) {
         if (currentPosition < 0) {
             positionLabel.setText("--- ");
 
@@ -91,7 +190,25 @@ public class Main extends Application implements IView {
             positionLabel.setText(String.format("Position %d%% %s", (int) currentPosition, caption));
 
         }
+
+        if (playTime != null && timeSlider != null) {
+            Platform.runLater(new Runnable() {
+                public void run() {
+                    playTime.setText(String.format("Position %d%% %s", (int) currentPosition, caption));
+                    timeSlider.setDisable(duration.isUnknown());
+                    if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO)
+                            && !timeSlider.isValueChanging()) {
+                        timeSlider
+                                .setValue(currentPosition);
+                    }
+                }
+            });
+        }
+
     }
+
+
+
 
     @Override
     public void onChangedVolume(final double volume) {
@@ -101,6 +218,17 @@ public class Main extends Application implements IView {
                 volumeLabel.setText(String.format("Volume %d", (int) volume));
             }
         });
+
+        if (playTime != null && timeSlider != null && volumeSlider != null) {
+            Platform.runLater(new Runnable() {
+                public void run() {
+                    if (!volumeSlider.isValueChanging()) {
+                        volumeSlider.setValue((int) Math.round(volume));
+                    }
+                }
+            });
+        }
+
     }
 
     @Override
@@ -126,6 +254,26 @@ public class Main extends Application implements IView {
     }
 
     @Override
+    public void onFullScreen() {
+        Screen screen = Screen.getPrimary();
+        Rectangle2D bounds = screen.getVisualBounds();
+        if(!isFullScreen){
+
+            mPrimaryStage.setX(bounds.getMinX());
+            mPrimaryStage.setY(bounds.getMinY());
+            mPrimaryStage.setWidth(bounds.getWidth());
+            mPrimaryStage.setHeight(bounds.getHeight());
+            isFullScreen = !isFullScreen;
+        } else {
+            mPrimaryStage.setX(bounds.getMinX());
+            mPrimaryStage.setY(bounds.getMinY());
+            mPrimaryStage.setWidth(600);
+            mPrimaryStage.setHeight(800);
+            isFullScreen = !isFullScreen;
+        }
+    }
+
+    @Override
     public void stop() throws Exception {
         super.stop();
         System.out.println("stop...");
@@ -133,6 +281,33 @@ public class Main extends Application implements IView {
             mStb.release();
         }
 
+    }
+
+
+    private Label makeSelectable(Label label) {
+        StackPane textStack = new StackPane();
+        TextField textField = new TextField(label.getText());
+        textField.setFont(new Font("Cambria", 16));
+        textField.setMinWidth(220);
+        label.setMinWidth(220);
+        textField.setEditable(false);
+        textField.setStyle(
+                "-fx-background-color: transparent; " +
+                "-fx-background-insets: 0;" +
+                "-fx-background-radius: 0;" +
+                "-fx-padding: 0;" +
+                "-fx-text-inner-color:#0076a3;"
+        );
+        // the invisible label is a hack to get the textField to size like a label.
+        Label invisibleLabel = new Label();
+        invisibleLabel.textProperty().bind(label.textProperty());
+        invisibleLabel.setVisible(false);
+        textStack.getChildren().addAll(invisibleLabel, textField);
+        label.textProperty().bindBidirectional(textField.textProperty());
+        label.setGraphic(textStack);
+        label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+
+        return label;
     }
 
     /**

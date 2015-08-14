@@ -353,6 +353,11 @@ public class Player implements IPlayer, RequestHandler {
         return new String[]{COMMAND_PLAY_CONTENT, COMMAND_PLAY_STREAM, COMMAND_GET_STATUS};
     }
 
+    public void fullscreen() {
+        mView.onFullScreen();
+    }
+
+
     @Override
     public JSONRPC2Response process(JSONRPC2Request jsonrpc2Request, MessageContext messageContext) {
         List params = (List) jsonrpc2Request.getParams();
