@@ -37,7 +37,7 @@ public class Main extends Application implements IView {
         mStb = new Stb(this);
 
         mediaView = new MediaView();
-        StackPane.setAlignment(mediaView,Pos.CENTER);
+        StackPane.setAlignment(mediaView, Pos.CENTER);
         DoubleProperty width = mediaView.fitWidthProperty();
         DoubleProperty height = mediaView.fitHeightProperty();
         width.bind(Bindings.selectDouble(mediaView.sceneProperty(), "width"));
@@ -84,21 +84,21 @@ public class Main extends Application implements IView {
 
     @Override
     public void onChangedTimePosition(double currentPosition, String caption) {
-        if(currentPosition <0){
+        if (currentPosition < 0) {
             positionLabel.setText("--- ");
 
-        }else{
-            positionLabel.setText(String.format("Position %d%% %s", (int)currentPosition, caption));
+        } else {
+            positionLabel.setText(String.format("Position %d%% %s", (int) currentPosition, caption));
 
         }
     }
 
     @Override
-    public void onChangedVolume(double volume) {
+    public void onChangedVolume(final double volume) {
         Platform.runLater(new Runnable() {
             @Override
             public void run() {
-                volumeLabel.setText(String.format("Volume %d", (int)volume));
+                volumeLabel.setText(String.format("Volume %d", (int) volume));
             }
         });
     }
@@ -110,10 +110,11 @@ public class Main extends Application implements IView {
 
     /**
      * event when device has registered on Liniking server
+     *
      * @param secretKey
      */
     @Override
-    public void onRegistered(String secretKey) {
+    public void onRegistered(final String secretKey) {
         //TODO: show secret key
         System.out.println("device registered, key = " + secretKey);
         Platform.runLater(new Runnable() {
@@ -122,14 +123,13 @@ public class Main extends Application implements IView {
                 secretCodeLabel.setText(String.format("Secret code: %s", secretKey));
             }
         });
-
     }
 
     @Override
     public void stop() throws Exception {
         super.stop();
         System.out.println("stop...");
-        if(mStb != null){
+        if (mStb != null) {
             mStb.release();
         }
 

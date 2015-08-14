@@ -31,6 +31,7 @@ public class Player implements IPlayer, RequestHandler {
 
     private static final String NOTIFY_END_PLAYING = "onPlayEndNotify";
     private static final String NOTIFY_START_PLAYING = "onStartPlaying";
+    private static final int SEEK_DURATION_SEC = 5;
 
     public enum PlayerState {
         NONE, PLAYING, PAUSED, STOPPED
@@ -40,7 +41,8 @@ public class Player implements IPlayer, RequestHandler {
     private final boolean repeat = false;
     private boolean stopRequested = false;
     private boolean atEndOfMedia = false;
-    private Duration duration;
+    private Duration mDuration;
+    private Duration mCurrentDuration;
     private PlayerState mState = PlayerState.NONE;
     private String mContentTitle;
     private int mEkId;
@@ -49,8 +51,10 @@ public class Player implements IPlayer, RequestHandler {
     private IPairing mPairing;
     private IPlayerObserver mPlayerObserver;
     private double mVolume = 100;
+    private double mPrevVolume = mVolume;
     private double mVolumeDelta = 5;
     private IView mView;
+
 
     private static final String[] CONTENT = {
             "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8"
@@ -77,7 +81,7 @@ public class Player implements IPlayer, RequestHandler {
                 updateValues();
             }
         });
-        mp.setVolume(mVolume/ 100.0);
+        mp.setVolume(mVolume / 100.0);
         mView.onChangedVolume(mVolume);
         mp.setOnPlaying(new Runnable() {
             public void run() {
@@ -86,7 +90,7 @@ public class Player implements IPlayer, RequestHandler {
                     mState = PlayerState.PAUSED;
                     stopRequested = false;
                 } else {
-                    mState =PlayerState.PLAYING;
+                    mState = PlayerState.PLAYING;
                     //playButton.setText("||");
                 }
             }
@@ -102,7 +106,7 @@ public class Player implements IPlayer, RequestHandler {
 
         mp.setOnReady(new Runnable() {
             public void run() {
-                duration = mp.getMedia().getDuration();
+                mDuration = mp.getMedia().getDuration();
                 updateValues();
                 mPlayerObserver.onNotify(new JSONRPC2Notification(NOTIFY_START_PLAYING).toJSONString());
             }
@@ -126,6 +130,30 @@ public class Player implements IPlayer, RequestHandler {
         });
     }
 
+    public void left() {
+        if (mp == null) return;
+        Duration newPosition = mCurrentDuration.add(Duration.seconds(-SEEK_DURATION_SEC));
+        mp.seek(newPosition);
+    }
+
+    public void right() {
+        if (mp == null) return;
+        Duration newPosition = mCurrentDuration.add(Duration.seconds(SEEK_DURATION_SEC));
+        mp.seek(newPosition);
+    }
+
+    public void mute() {
+        if (mp == null) return;
+        if (mVolume != 0) {
+            mPrevVolume = mVolume;
+            mVolume = 0.0;
+        } else {
+            mVolume = mPrevVolume;
+        }
+        mp.setVolume(mVolume / 100.0);
+        mView.onChangedVolume(mVolume);
+    }
+
     public void volumeDown() {
         mVolume -= mVolumeDelta;
         if (mVolume < 0) {
@@ -140,7 +168,7 @@ public class Player implements IPlayer, RequestHandler {
         if (mVolume > 100) {
             mVolume = 100;
         }
-        mp.setVolume(mVolume/ 100.0);
+        mp.setVolume(mVolume / 100.0);
         mView.onChangedVolume(mVolume);
     }
 
@@ -171,55 +199,17 @@ public class Player implements IPlayer, RequestHandler {
     protected void updateValues() {
         Platform.runLater(new Runnable() {
             public void run() {
-                Duration currentTime = mp.getCurrentTime();
+                mCurrentDuration = mp.getCurrentTime();
                 double position = -1;
-                if(!duration.isUnknown()){
-                    position = currentTime.divide(duration).toMillis() * 100.0;
+                if (!mDuration.isUnknown()) {
+                    position = mCurrentDuration.divide(mDuration).toMillis() * 100.0;
                 }
-                String timeCaption = formatTime(currentTime,duration);
+                String timeCaption = formatTime(mCurrentDuration, mDuration);
                 mView.onChangedTimePosition(position, timeCaption);
             }
         });
     }
 
-    private static String formatTime(Duration elapsed, Duration duration) {
-        int intElapsed = (int) Math.floor(elapsed.toSeconds());
-        int elapsedHours = intElapsed / (60 * 60);
-        if (elapsedHours > 0) {
-            intElapsed -= elapsedHours * 60 * 60;
-        }
-        int elapsedMinutes = intElapsed / 60;
-        int elapsedSeconds = intElapsed - elapsedHours * 60 * 60
-                - elapsedMinutes * 60;
-
-        if (duration.greaterThan(Duration.ZERO)) {
-            int intDuration = (int) Math.floor(duration.toSeconds());
-            int durationHours = intDuration / (60 * 60);
-            if (durationHours > 0) {
-                intDuration -= durationHours * 60 * 60;
-            }
-            int durationMinutes = intDuration / 60;
-            int durationSeconds = intDuration - durationHours * 60 * 60
-                    - durationMinutes * 60;
-            if (durationHours > 0) {
-                return String.format("%d:%02d:%02d/%d:%02d:%02d",
-                        elapsedHours, elapsedMinutes, elapsedSeconds,
-                        durationHours, durationMinutes, durationSeconds);
-            } else {
-                return String.format("%02d:%02d/%02d:%02d",
-                        elapsedMinutes, elapsedSeconds, durationMinutes,
-                        durationSeconds);
-            }
-        } else {
-            if (elapsedHours > 0) {
-                return String.format("%d:%02d:%02d", elapsedHours,
-                        elapsedMinutes, elapsedSeconds);
-            } else {
-                return String.format("%02d:%02d", elapsedMinutes,
-                        elapsedSeconds);
-            }
-        }
-    }
 
     @Override
     public void playContent(int id, int episode, String studio, int startSec) {
@@ -262,6 +252,44 @@ public class Player implements IPlayer, RequestHandler {
         return result;
     }
 
+    private static String formatTime(Duration elapsed, Duration duration) {
+        int intElapsed = (int) Math.floor(elapsed.toSeconds());
+        int elapsedHours = intElapsed / (60 * 60);
+        if (elapsedHours > 0) {
+            intElapsed -= elapsedHours * 60 * 60;
+        }
+        int elapsedMinutes = intElapsed / 60;
+        int elapsedSeconds = intElapsed - elapsedHours * 60 * 60
+                - elapsedMinutes * 60;
+
+        if (duration.greaterThan(Duration.ZERO)) {
+            int intDuration = (int) Math.floor(duration.toSeconds());
+            int durationHours = intDuration / (60 * 60);
+            if (durationHours > 0) {
+                intDuration -= durationHours * 60 * 60;
+            }
+            int durationMinutes = intDuration / 60;
+            int durationSeconds = intDuration - durationHours * 60 * 60
+                    - durationMinutes * 60;
+            if (durationHours > 0) {
+                return String.format("%d:%02d:%02d/%d:%02d:%02d",
+                        elapsedHours, elapsedMinutes, elapsedSeconds,
+                        durationHours, durationMinutes, durationSeconds);
+            } else {
+                return String.format("%02d:%02d/%02d:%02d",
+                        elapsedMinutes, elapsedSeconds, durationMinutes,
+                        durationSeconds);
+            }
+        } else {
+            if (elapsedHours > 0) {
+                return String.format("%d:%02d:%02d", elapsedHours,
+                        elapsedMinutes, elapsedSeconds);
+            } else {
+                return String.format("%02d:%02d", elapsedMinutes,
+                        elapsedSeconds);
+            }
+        }
+    }
     //--------------- JSONRPC2------------------
 
     @Override

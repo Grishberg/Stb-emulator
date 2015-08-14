@@ -12,8 +12,14 @@
       </options>
     </properties>
     <root id="root">
-      <element id="archive" name="JavaFXApp.jar">
+      <element id="archive" name="StbEmulator.jar">
         <element id="module-output" name="MP" />
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="com.squareup.retrofit:retrofit:1.9.0" />
+          <element id="library" level="project" name="com.thetransactioncompany:jsonrpc2-server:1.11" />
+          <element id="library" level="project" name="commons-cli-1.1" />
+          <element id="library" level="project" name="commons-io-1.2" />
+        </element>
       </element>
     </root>
   </artifact>

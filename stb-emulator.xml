@@ -128,38 +128,143 @@
   
   <!-- Modules -->
   
-  <import file="${basedir}/module_mp.xml"/>
+  
+  <!-- Module MP -->
+  
+  <dirname property="module.mp.basedir" file="${ant.file}"/>
+  
+  
+  <property name="module.jdk.home.mp" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.mp" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.mp" value="${project.jdk.classpath}"/>
+  
+  <property name="compiler.args.mp" value="-encoding UTF-8 -source 1.7 ${compiler.args}"/>
+  
+  <property name="mp.output.dir" value="${module.mp.basedir}/out/production/MP"/>
+  <property name="mp.testoutput.dir" value="${module.mp.basedir}/out/test/MP"/>
+  
+  <path id="mp.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="mp.module.production.classpath">
+    <path refid="${module.jdk.classpath.mp}"/>
+    <path refid="library.commons-cli-1.1.classpath"/>
+    <path refid="library.commons-io-1.2.classpath"/>
+    <path refid="library.com.thetransactioncompany:jsonrpc2-server:1.11.classpath"/>
+    <path refid="library.com.squareup.retrofit:retrofit:1.9.0.classpath"/>
+  </path>
+  
+  <path id="mp.runtime.production.module.classpath">
+    <pathelement location="${mp.output.dir}"/>
+    <path refid="library.commons-cli-1.1.classpath"/>
+    <path refid="library.commons-io-1.2.classpath"/>
+    <path refid="library.com.thetransactioncompany:jsonrpc2-server:1.11.classpath"/>
+    <path refid="library.com.squareup.retrofit:retrofit:1.9.0.classpath"/>
+  </path>
+  
+  <path id="mp.module.classpath">
+    <path refid="${module.jdk.classpath.mp}"/>
+    <pathelement location="${mp.output.dir}"/>
+    <path refid="library.commons-cli-1.1.classpath"/>
+    <path refid="library.commons-io-1.2.classpath"/>
+    <path refid="library.com.thetransactioncompany:jsonrpc2-server:1.11.classpath"/>
+    <path refid="library.com.squareup.retrofit:retrofit:1.9.0.classpath"/>
+  </path>
+  
+  <path id="mp.runtime.module.classpath">
+    <pathelement location="${mp.testoutput.dir}"/>
+    <pathelement location="${mp.output.dir}"/>
+    <path refid="library.commons-cli-1.1.classpath"/>
+    <path refid="library.commons-io-1.2.classpath"/>
+    <path refid="library.com.thetransactioncompany:jsonrpc2-server:1.11.classpath"/>
+    <path refid="library.com.squareup.retrofit:retrofit:1.9.0.classpath"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.mp">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.mp">
+    <patternset refid="excluded.from.module.mp"/>
+  </patternset>
+  
+  <path id="mp.module.sourcepath">
+    <dirset dir="${module.mp.basedir}">
+      <include name="src"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.mp" depends="compile.module.mp.production,compile.module.mp.tests" description="Compile module MP"/>
+  
+  <target name="compile.module.mp.production" depends="register.custom.compilers" description="Compile module MP; production classes">
+    <mkdir dir="${mp.output.dir}"/>
+    <javac2 destdir="${mp.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.mp}/javac">
+      <compilerarg line="${compiler.args.mp}"/>
+      <bootclasspath refid="mp.module.bootclasspath"/>
+      <classpath refid="mp.module.production.classpath"/>
+      <src refid="mp.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.mp"/>
+    </javac2>
+    
+    <copy todir="${mp.output.dir}">
+      <fileset dir="${module.mp.basedir}/src">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.mp.tests" depends="register.custom.compilers,compile.module.mp.production" description="compile module MP; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.mp" description="cleanup module">
+    <delete dir="${mp.output.dir}"/>
+    <delete dir="${mp.testoutput.dir}"/>
+  </target>
   
   <target name="init" description="Build initialization">
     <!-- Perform any build initialization in this target -->
   </target>
   
-  <target name="clean" depends="clean.module.mp, clean.artifact.javafxapp" description="cleanup all"/>
+  <target name="clean" depends="clean.module.mp, clean.artifact.stbemulator" description="cleanup all"/>
   
   <target name="build.modules" depends="init, clean, compile.module.mp" description="build all modules"/>
   
   <target name="init.artifacts">
     <property name="artifacts.temp.dir" value="${basedir}/__artifacts_temp"/>
-    <property name="artifact.output.javafxapp" value="${basedir}/out/artifacts/JavaFXApp"/>
+    <property name="artifact.output.stbemulator" value="${basedir}/out/artifacts/StbEmulator"/>
     <mkdir dir="${artifacts.temp.dir}"/>
     <property name="artifact.temp.output.JavaFXApp" value="${artifacts.temp.dir}/JavaFXApp.jar"/>
     <taskdef resource="com/sun/javafx/tools/ant/antlib.xml" uri="javafx:com.sun.javafx.tools.ant" classpath="${jdk.home.1.8}/lib/ant-javafx.jar"/>
   </target>
   
-  <target name="clean.artifact.javafxapp" description="clean JavaFXApp artifact output">
-    <delete dir="${artifact.output.javafxapp}"/>
+  <target name="clean.artifact.stbemulator" description="clean StbEmulator artifact output">
+    <delete dir="${artifact.output.stbemulator}"/>
   </target>
   
-  <target name="artifact.javafxapp" depends="init.artifacts, compile.module.mp" description="Build &#39;JavaFXApp&#39; artifact" xmlns:fx="javafx:com.sun.javafx.tools.ant">
-    <mkdir dir="${artifact.output.javafxapp}"/>
+  <target name="artifact.stbemulator" depends="init.artifacts, compile.module.mp" description="Build &#39;StbEmulator&#39; artifact" xmlns:fx="javafx:com.sun.javafx.tools.ant">
+    <mkdir dir="${artifact.output.stbemulator}"/>
     <copy todir="${artifact.temp.output.JavaFXApp}">
       <fileset dir="${mp.output.dir}"/>
     </copy>
+    <copy file="${basedir}/libs/retrofit-1.9.0.jar" tofile="${artifact.temp.output.JavaFXApp}/retrofit-1.9.0.jar"/>
+    <copy file="${basedir}/libs/gson-2.3.1.jar" tofile="${artifact.temp.output.JavaFXApp}/gson-2.3.1.jar"/>
+    <copy file="${basedir}/libs/jsonrpc2-server-1.11.jar" tofile="${artifact.temp.output.JavaFXApp}/jsonrpc2-server-1.11.jar"/>
+    <copy file="${basedir}/libs/json-smart-1.3.1.jar" tofile="${artifact.temp.output.JavaFXApp}/json-smart-1.3.1.jar"/>
+    <copy file="${basedir}/libs/jsonrpc2-base-1.36.jar" tofile="${artifact.temp.output.JavaFXApp}/jsonrpc2-base-1.36.jar"/>
+    <copy file="${basedir}/libs/javax.servlet-api-3.0.1.jar" tofile="${artifact.temp.output.JavaFXApp}/javax.servlet-api-3.0.1.jar"/>
+    <copy file="${basedir}/libs/commons-cli-1.1.jar" tofile="${artifact.temp.output.JavaFXApp}/commons-cli-1.1.jar"/>
+    <copy file="${basedir}/libs/commons-io-1.2.jar" tofile="${artifact.temp.output.JavaFXApp}/commons-io-1.2.jar"/>
+    <copy file="${basedir}/libs/junit.jar" tofile="${artifact.temp.output.JavaFXApp}/junit.jar"/>
+    <copy file="${basedir}/libs/rabbitmq-client.jar" tofile="${artifact.temp.output.JavaFXApp}/rabbitmq-client.jar"/>
+    <copy file="${basedir}/libs/rabbitmq-client-tests.jar" tofile="${artifact.temp.output.JavaFXApp}/rabbitmq-client-tests.jar"/>
     <fx:fileset id="all_but_JavaFXApp" dir="${artifact.temp.output.JavaFXApp}" includes="**/*.jar">
       <exclude name="JavaFXApp.jar"/>
     </fx:fileset>
     <fx:fileset id="all_JavaFXApp" dir="${artifact.temp.output.JavaFXApp}" includes="**/*.jar"/>
-    <fx:application id="JavaFXApp_id" name="JavaFXApp" mainClass="sample.Main"/>
+    <fx:application id="JavaFXApp_id" name="StbEmulator" mainClass="sample.Main"/>
     <fx:jar destfile="${artifact.temp.output.JavaFXApp}/JavaFXApp.jar">
       <fx:application refid="JavaFXApp_id"/>
       <fileset dir="${artifact.temp.output.JavaFXApp}" excludes="**/*.jar"/>
@@ -170,11 +275,12 @@
     </fx:jar>
     <fx:deploy width="600" height="400" updatemode="background" outdir="${artifact.temp.output.JavaFXApp}/deploy" outfile="JavaFXApp">
       <fx:application refid="JavaFXApp_id"/>
+      <fx:info title="Stb emulator" vendor="Grigoriy Rylov"/>
       <fx:resources>
         <fx:fileset refid="all_JavaFXApp"/>
       </fx:resources>
     </fx:deploy>
-    <copy todir="${artifact.output.javafxapp}">
+    <copy todir="${artifact.output.stbemulator}">
       <fileset dir="${artifact.temp.output.JavaFXApp}/deploy"/>
     </copy>
     <delete includeemptydirs="true">
@@ -182,7 +288,7 @@
     </delete>
   </target>
   
-  <target name="build.all.artifacts" depends="artifact.javafxapp" description="Build all artifacts">
+  <target name="build.all.artifacts" depends="artifact.stbemulator" description="Build all artifacts">
     
     <!-- Delete temporary files -->
     <delete dir="${artifacts.temp.dir}"/>
