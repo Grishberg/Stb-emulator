@@ -55,7 +55,7 @@ public class Player implements IPlayer, RequestHandler {
     private IPlayerObserver mPlayerObserver;
     private double mVolume = 100;
     private double mPrevVolume = mVolume;
-    private double mVolumeDelta = 5;
+    private double mVolumeDelta = 1;
     private IView mView;
     private boolean mIsRightPositionChanged;
     private boolean mIsLeftPositionChanged;
@@ -66,7 +66,6 @@ public class Player implements IPlayer, RequestHandler {
      */
     private static final String[] CONTENT = {
             "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8"
-            , "http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8"
             , "http://vevoplaylist-live.hls.adaptive.level3.net/vevo/ch1/appleman.m3u8"
             , "http://srv6.zoeweb.tv:1935/z330-live/stream/playlist.m3u8"
     };

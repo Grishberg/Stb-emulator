@@ -27,8 +27,6 @@ public class Main extends Application implements IView {
     private Label positionLabel;
     private Label volumeLabel;
     private MediaView mediaView;
-    private boolean stopRequested = false;
-    private boolean atEndOfMedia = false;
     private Slider timeSlider;
     private Slider volumeSlider;
     private HBox mediaBar;
