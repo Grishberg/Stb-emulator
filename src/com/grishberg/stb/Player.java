@@ -51,7 +51,7 @@ public class Player implements IPlayer, RequestHandler {
     private int mEkId;
     private int mEpId;
     private int mIdStream;
-    private IPairing mPairing;
+    private IPairing mPairing; // for checking token
     private IPlayerObserver mPlayerObserver;
     private double mVolume = 100;
     private double mPrevVolume = mVolume;
