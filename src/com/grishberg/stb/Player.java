@@ -74,7 +74,6 @@ public class Player implements IPlayer, RequestHandler {
      */
     private static final String[] CONTENT_TITLE = {
             "jobs"
-            , "bip bop"
             , "live tv 1"
             , "live tv 2"
     };
