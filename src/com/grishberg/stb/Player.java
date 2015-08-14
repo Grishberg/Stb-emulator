@@ -404,8 +404,8 @@ public class Player implements IPlayer, RequestHandler {
                 break;
             case COMMAND_PLAY_CONTENT:
                 //TODO: check token
-                id = (int) ((long) params.get(0));
-                int episode = (int) ((long) params.get(1));
+                id = Math.abs((int) ((long) params.get(0)));
+                int episode = Math.abs( (int) ((long) params.get(1)) );
                 String studio = (String) params.get(2);
                 startSec = (int) ((long) params.get(3));
                 playContent(id, episode, studio, startSec);
@@ -413,8 +413,8 @@ public class Player implements IPlayer, RequestHandler {
 
             case COMMAND_PLAY_STREAM:
                 //TODO: check token
-                id = (int) ((long) params.get(0));
-                startSec = (int) ((long) params.get(1));
+                id = Math.abs( (int) ((long) params.get(0)) );
+                startSec = Math.abs( (int) ((long) params.get(1)) );
                 playStream(id, startSec);
                 break;
             default:
