@@ -188,10 +188,6 @@ public class Player implements IPlayer, RequestHandler {
         });
     }
 
-    public void fullscreen(){
-        //mView.onFullscreen();
-    }
-
     public void left() {
         if (mp == null) return;
         mIsLeftPositionChanged = true;
