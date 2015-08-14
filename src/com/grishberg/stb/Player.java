@@ -188,10 +188,6 @@ public class Player implements IPlayer, RequestHandler {
         });
     }
 
-    public void fullscreen(){
-        //mView.onFullscreen();
-    }
-
     public void left() {
         if (mp == null) return;
         mIsLeftPositionChanged = true;
@@ -390,6 +386,11 @@ public class Player implements IPlayer, RequestHandler {
     public String[] handledRequests() {
         return new String[]{COMMAND_PLAY_CONTENT, COMMAND_PLAY_STREAM, COMMAND_GET_STATUS};
     }
+
+    public void fullscreen() {
+        mView.onFullScreen();
+    }
+
 
     @Override
     public JSONRPC2Response process(JSONRPC2Request jsonrpc2Request, MessageContext messageContext) {

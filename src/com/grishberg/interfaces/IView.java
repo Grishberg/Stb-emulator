@@ -13,4 +13,5 @@ public interface IView {
     void onChangedVolume(double volume);
     void onChangedState(Player.PlayerState state);
     void onRegistered(String secretKey);
+    void onFullScreen();
 }
