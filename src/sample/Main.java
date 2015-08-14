@@ -27,16 +27,13 @@ public class Main extends Application implements IView {
     private Label positionLabel;
     private Label volumeLabel;
     private MediaView mediaView;
-
     private boolean stopRequested = false;
     private boolean atEndOfMedia = false;
-    private Duration duration;
     private Slider timeSlider;
-    private Label playTime;
     private Slider volumeSlider;
     private HBox mediaBar;
     private Stage mPrimaryStage;
-    private boolean isFullScreen =false;
+    private boolean isFullScreen = false;
 
     public Main() {
     }
@@ -74,7 +71,6 @@ public class Main extends Application implements IView {
         volumeLabel.setTextFill(Color.web("#ffffff"));
         StackPane.setAlignment(volumeLabel, Pos.BOTTOM_LEFT);
 
-
         StackPane rootMedia = new StackPane();
         rootMedia.setStyle("-fx-background-color: #000000;");
 
@@ -105,12 +101,6 @@ public class Main extends Application implements IView {
 
         mediaBar.getChildren().add(timeSlider);
 
-        // Add Play label
-        playTime = new Label();
-        playTime.setPrefWidth(130);
-        playTime.setMinWidth(50);
-        mediaBar.getChildren().add(playTime);
-
         // Add the volume label
         Label volumeLabel = new Label("Vol: ");
         mediaBar.getChildren().add(volumeLabel);
@@ -130,13 +120,11 @@ public class Main extends Application implements IView {
         root.getChildren().add(mediaBar);
         root.getChildren().add(rootMedia);
 
-        Scene scene = new Scene(root, 640, 300);
+        Scene scene = new Scene(root, 800, 600);
 
         primaryStage.setScene(scene);
         primaryStage.show();
     }
-
-
 
     private static String formatTime(Duration elapsed, Duration duration) {
         int intElapsed = (int) Math.floor(elapsed.toSeconds());
@@ -185,30 +173,19 @@ public class Main extends Application implements IView {
     public void onChangedTimePosition(final double currentPosition, final String caption) {
         if (currentPosition < 0) {
             positionLabel.setText("--- ");
-
+            timeSlider.setDisable(true);
         } else {
             positionLabel.setText(String.format("Position %d%% %s", (int) currentPosition, caption));
-
-        }
-
-        if (playTime != null && timeSlider != null) {
+            timeSlider.setDisable(false);
             Platform.runLater(new Runnable() {
                 public void run() {
-                    playTime.setText(String.format("Position %d%% %s", (int) currentPosition, caption));
-                    timeSlider.setDisable(duration.isUnknown());
-                    if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO)
-                            && !timeSlider.isValueChanging()) {
-                        timeSlider
-                                .setValue(currentPosition);
+                    if (!timeSlider.isDisabled() && !timeSlider.isValueChanging()) {
+                        timeSlider.setValue(currentPosition);
                     }
                 }
             });
         }
-
     }
-
-
-
 
     @Override
     public void onChangedVolume(final double volume) {
@@ -216,19 +193,11 @@ public class Main extends Application implements IView {
             @Override
             public void run() {
                 volumeLabel.setText(String.format("Volume %d", (int) volume));
+                if (!volumeSlider.isValueChanging()) {
+                    volumeSlider.setValue((int) Math.round(volume));
+                }
             }
         });
-
-        if (playTime != null && timeSlider != null && volumeSlider != null) {
-            Platform.runLater(new Runnable() {
-                public void run() {
-                    if (!volumeSlider.isValueChanging()) {
-                        volumeSlider.setValue((int) Math.round(volume));
-                    }
-                }
-            });
-        }
-
     }
 
     @Override
@@ -257,7 +226,7 @@ public class Main extends Application implements IView {
     public void onFullScreen() {
         Screen screen = Screen.getPrimary();
         Rectangle2D bounds = screen.getVisualBounds();
-        if(!isFullScreen){
+        if (!isFullScreen) {
 
             mPrimaryStage.setX(bounds.getMinX());
             mPrimaryStage.setY(bounds.getMinY());
@@ -267,8 +236,8 @@ public class Main extends Application implements IView {
         } else {
             mPrimaryStage.setX(bounds.getMinX());
             mPrimaryStage.setY(bounds.getMinY());
-            mPrimaryStage.setWidth(600);
-            mPrimaryStage.setHeight(800);
+            mPrimaryStage.setWidth(800);
+            mPrimaryStage.setHeight(600);
             isFullScreen = !isFullScreen;
         }
     }
@@ -280,9 +249,7 @@ public class Main extends Application implements IView {
         if (mStb != null) {
             mStb.release();
         }
-
     }
-
 
     private Label makeSelectable(Label label) {
         StackPane textStack = new StackPane();
@@ -293,10 +260,10 @@ public class Main extends Application implements IView {
         textField.setEditable(false);
         textField.setStyle(
                 "-fx-background-color: transparent; " +
-                "-fx-background-insets: 0;" +
-                "-fx-background-radius: 0;" +
-                "-fx-padding: 0;" +
-                "-fx-text-inner-color:#0076a3;"
+                        "-fx-background-insets: 0;" +
+                        "-fx-background-radius: 0;" +
+                        "-fx-padding: 0;" +
+                        "-fx-text-inner-color:#0076a3;"
         );
         // the invisible label is a hack to get the textField to size like a label.
         Label invisibleLabel = new Label();
