@@ -77,7 +77,7 @@ public class Player implements IPlayer, RequestHandler {
                 updateValues();
             }
         });
-        mp.setVolume(mVolume);
+        mp.setVolume(mVolume/ 100.0);
         mView.onChangedVolume(mVolume);
         mp.setOnPlaying(new Runnable() {
             public void run() {
@@ -126,21 +126,21 @@ public class Player implements IPlayer, RequestHandler {
         });
     }
 
-    public void volumeUp() {
+    public void volumeDown() {
         mVolume -= mVolumeDelta;
         if (mVolume < 0) {
             mVolume = 0;
         }
-        mp.setVolume(mVolume);
+        mp.setVolume(mVolume / 100.0);
         mView.onChangedVolume(mVolume);
     }
 
-    public void volumeDown() {
+    public void volumeUp() {
         mVolume += mVolumeDelta;
         if (mVolume > 100) {
             mVolume = 100;
         }
-        mp.setVolume(mVolume);
+        mp.setVolume(mVolume/ 100.0);
         mView.onChangedVolume(mVolume);
     }
 
@@ -176,7 +176,8 @@ public class Player implements IPlayer, RequestHandler {
                 if(!duration.isUnknown()){
                     position = currentTime.divide(duration).toMillis() * 100.0;
                 }
-                mView.onChangedTimePosition(position);
+                String timeCaption = formatTime(currentTime,duration);
+                mView.onChangedTimePosition(position, timeCaption);
             }
         });
     }

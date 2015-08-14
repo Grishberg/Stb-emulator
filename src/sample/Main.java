@@ -83,12 +83,12 @@ public class Main extends Application implements IView {
     }
 
     @Override
-    public void onChangedTimePosition(double currentPosition) {
+    public void onChangedTimePosition(double currentPosition, String caption) {
         if(currentPosition <0){
             positionLabel.setText("--- ");
 
         }else{
-            positionLabel.setText(String.format("Position %d", (int)currentPosition));
+            positionLabel.setText(String.format("Position %d%% %s", (int)currentPosition, caption));
 
         }
     }

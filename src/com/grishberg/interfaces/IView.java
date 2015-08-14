@@ -9,7 +9,7 @@ import javafx.scene.media.MediaPlayer;
  */
 public interface IView {
     void setMediaPlayer(MediaPlayer mediaPlayer);
-    void onChangedTimePosition(double currentPosition);
+    void onChangedTimePosition(double currentPosition, String caption);
     void onChangedVolume(double volume);
     void onChangedState(Player.PlayerState state);
     void onRegistered(String secretKey);
