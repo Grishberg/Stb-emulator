@@ -1,6 +1,7 @@
 package com.grishberg.data.api;
 
 import com.grishberg.data.model.MqOutMessage;
+import com.grishberg.data.model.QueueInfo;
 import com.rabbitmq.client.*;
 
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
@@ -112,8 +113,7 @@ public class MqServer {
                         //channel.confirmSelect();
                         while (true) {
                             MqOutMessage mqOutMessage = (MqOutMessage) mOutMessagesQueue.takeFirst();
-                            if((Thread.currentThread().interrupted()))
-                            {
+                            if ((Thread.currentThread().interrupted())) {
                                 return;
                             }
                             try {
@@ -178,8 +178,9 @@ public class MqServer {
                             //TODO: разобрать рпц запрос
                             if (mMqObserver != null) {
                                 String replyQueueName = delivery.getProperties().getReplyTo();
-                                JSONRPC2Response response = mMqObserver.onMessage(replyQueueName
-                                        , delivery.getProperties().getCorrelationId(), message);
+                                QueueInfo queueInfo = new QueueInfo(replyQueueName
+                                        , delivery.getProperties().getCorrelationId());
+                                JSONRPC2Response response = mMqObserver.onMessage(queueInfo, message);
                                 if (response != null) {
                                     publishMessage(new MqOutMessage(
                                             replyQueueName
@@ -215,7 +216,7 @@ public class MqServer {
     public interface IMqObserver {
         void onBoundOk();
 
-        JSONRPC2Response onMessage(String queueName, String corrId, String msg);
+        JSONRPC2Response onMessage(QueueInfo queueInfo, String msg);
     }
 
     public void release() {
@@ -231,7 +232,7 @@ public class MqServer {
         try {
             mConnection.close();
             mChannel.close();
-        } catch (Exception e){
+        } catch (Exception e) {
 
         }
         mSubscribeThread = null;

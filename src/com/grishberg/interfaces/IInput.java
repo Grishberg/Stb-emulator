@@ -8,8 +8,8 @@ public interface IInput {
     void up();
     void down();
     void home();
-    void left();
-    void right();
+    void left(int state);
+    void right(int state);
     void select();
     void stop();
     void volumeUp();

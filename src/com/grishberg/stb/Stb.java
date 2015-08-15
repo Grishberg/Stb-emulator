@@ -6,6 +6,7 @@ import com.grishberg.data.api.MqServer;
 import com.grishberg.data.model.MqOutMessage;
 import com.grishberg.data.model.MqPolicyResponse;
 import com.grishberg.data.model.PairingInfo;
+import com.grishberg.data.model.QueueInfo;
 import com.grishberg.data.rest.RestConst;
 import com.grishberg.interfaces.IPlayerObserver;
 import com.grishberg.interfaces.ITokenLObserver;
@@ -32,7 +33,8 @@ import com.grishberg.framework.*;
  * Created by g on 13.08.15.
  */
 public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserver {
-
+    private static final String DIGITS_DEC = "0123456789";
+    private static final String DIGITS_HEX = "0123456789abcdef";
     private static final String TAG = Stb.class.getSimpleName();
     private String mId = "01234567890";
     private String mMac;
@@ -46,8 +48,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
     private String mHost;
     private String mToken;
     private IView mView;
-    private String mLastQueueName;
-    private String mLastCorrId;
+    private QueueInfo mLastQueue;
 
     public Stb(IView view) {
         mMac = generateMac();
@@ -125,11 +126,16 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
 
     }
 
+    /**
+     * receive message from mobile device event
+     * @param queue client's queue name for reply
+     * @param msg
+     * @return
+     */
     @Override
-    public JSONRPC2Response onMessage(String queueName, String corrId, String msg) {
+    public JSONRPC2Response onMessage(QueueInfo queue, String msg) {
         System.out.println("on new message msg = " + msg);
-        mLastQueueName = queueName;
-        mLastCorrId = corrId;
+        mLastQueue = queue;
         JSONRPC2Request request = null;
         try {
 
@@ -151,7 +157,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
 
     @Override
     public void onNotify(String msg) {
-        mMqServer.sendMqMessage(new MqOutMessage(mLastQueueName, msg, mLastCorrId));
+        mMqServer.sendMqMessage(new MqOutMessage(mLastQueue.getName(), msg, mLastQueue.getCorrelationId()));
     }
 
     public static String getMqAddress(List<String> addresses, String mac) {
@@ -179,39 +185,32 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
 
     private static String generateMac() {
         StringBuilder builder = new StringBuilder("a8f94b20");
-        final String alphabet = "0123456789abcde";
-        final int N = alphabet.length();
-
+        final int N = DIGITS_HEX.length();
         Random r = new Random();
-
         for (int i = 0; i < 4; i++) {
-            builder.append(alphabet.charAt(r.nextInt(N)));
+            builder.append(DIGITS_HEX.charAt(r.nextInt(N)));
         }
         return builder.toString();
     }
 
     private static String generateId() {
         StringBuilder builder = new StringBuilder();
-        final String alphabet = "0123456789abcde";
-        final int N = alphabet.length();
-
+        final int N = DIGITS_HEX.length();
         Random r = new Random();
-
         for (int i = 0; i < 32; i++) {
-            builder.append(alphabet.charAt(r.nextInt(N)));
+            builder.append(DIGITS_HEX.charAt(r.nextInt(N)));
         }
         return builder.toString();
     }
 
     private static String generateSecretKey() {
         StringBuilder builder = new StringBuilder();
-        final String alphabet = "0123456789";
-        final int N = alphabet.length();
+        final int N = DIGITS_DEC.length();
 
         Random r = new Random();
 
         for (int i = 0; i < 9; i++) {
-            builder.append(alphabet.charAt(r.nextInt(N)));
+            builder.append(DIGITS_DEC.charAt(r.nextInt(N)));
         }
         return builder.toString();
     }

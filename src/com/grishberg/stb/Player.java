@@ -28,11 +28,9 @@ public class Player implements IPlayer, RequestHandler {
     private static final String COMMAND_PLAY_STREAM = "Player.playStream";
     private static final String COMMAND_PLAY_CONTENT = "Player.playContent";
     private static final String COMMAND_GET_STATUS = "Player.getStatus";
-
     private static final String NOTIFY_END_PLAYING = "onPlayEndNotify";
     private static final String NOTIFY_ERROR = "onErrorNotify";
     private static final String NOTIFY_START_PLAYING = "onStartPlaying";
-
     private static final int SEEK_DURATION_SEC = 30;
 
     public enum PlayerState {
@@ -47,6 +45,7 @@ public class Player implements IPlayer, RequestHandler {
     private Duration mCurrentPosition;
     private int mDurationSeconds;
     private int mPositionSeconds;
+    private int mSeekDurationSec;
     private PlayerState mState = PlayerState.NONE;
     private String mContentTitle;
     private int mEkId;
@@ -58,8 +57,7 @@ public class Player implements IPlayer, RequestHandler {
     private double mPrevVolume = mVolume;
     private double mVolumeDelta = 1;
     private IView mView;
-    private boolean mIsRightPositionChanged;
-    private boolean mIsLeftPositionChanged;
+    private boolean mIsPositionChanging;
     private Map<String, Object> mResult;
     /**
      * test media content
@@ -143,6 +141,7 @@ public class Player implements IPlayer, RequestHandler {
                 System.out.println("----------Player onReady");
                 mDuration = mp.getMedia().getDuration();
                 mDurationSeconds = (int) mDuration.toSeconds();
+                mSeekDurationSec = mDurationSeconds / SEEK_DURATION_SEC;
                 mState = PlayerState.READY;
                 onStateChanged();
                 updateValues();
@@ -188,24 +187,27 @@ public class Player implements IPlayer, RequestHandler {
 
     public void left() {
         if (mp == null) return;
-        mIsLeftPositionChanged = true;
-        mState = PlayerState.BUFFERING;
+        mIsPositionChanging = true;
         mCurrentPosition = mCurrentPosition.add(Duration.seconds(-SEEK_DURATION_SEC));
         if (mCurrentPosition.lessThan(Duration.seconds(0))) {
             mCurrentPosition = Duration.seconds(0);
         }
-        mp.seek(mCurrentPosition);
+        updateValues();
     }
 
     public void right() {
         if (mp == null) return;
-        mIsRightPositionChanged = true;
-        mState = PlayerState.BUFFERING;
+        mIsPositionChanging = true;
         mCurrentPosition = mCurrentPosition.add(Duration.seconds(SEEK_DURATION_SEC));
         if (mCurrentPosition.greaterThan(mDuration)) {
             mCurrentPosition = mDuration;
         }
-        System.out.println("pos = " + mCurrentPosition.toSeconds());
+        updateValues();
+    }
+
+    public void doSeek() {
+        mState = PlayerState.BUFFERING;
+        mIsPositionChanging = false;
         mp.seek(mCurrentPosition);
     }
 
@@ -239,6 +241,12 @@ public class Player implements IPlayer, RequestHandler {
         mView.onChangedVolume(mVolume);
     }
 
+    public void stop(){
+        if(mp != null){
+            mp.stop();
+        }
+    }
+
     public void playPause() {
         MediaPlayer.Status status = mp.getStatus();
 
@@ -270,18 +278,11 @@ public class Player implements IPlayer, RequestHandler {
         Platform.runLater(new Runnable() {
             public void run() {
                 Duration currentTime = mp.getCurrentTime();
-                if (mIsRightPositionChanged && currentTime.greaterThan(mCurrentPosition)) {
-                    mIsRightPositionChanged = false;
-                    mState = PlayerState.PLAYING;
-                    onStateChanged();
-                }
-                if (mIsLeftPositionChanged) {
-                    mIsLeftPositionChanged = false;
-                    mState = PlayerState.PLAYING;
-                    onStateChanged();
-                }
-                if (mIsRightPositionChanged == false) {
-                    mCurrentPosition = currentTime;
+                if (!mIsPositionChanging) {
+                    if (mState == PlayerState.BUFFERING) {
+                        mState = PlayerState.PLAYING;
+                        onStateChanged();
+                    }
                 }
 
                 double position = -1;

@@ -1,6 +1,7 @@
 package com.grishberg.stb;
 
 import com.grishberg.interfaces.IInput;
+import com.grishberg.interfaces.IOnTickListener;
 import com.grishberg.interfaces.IPairing;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
@@ -9,13 +10,14 @@ import com.thetransactioncompany.jsonrpc2.server.MessageContext;
 import com.thetransactioncompany.jsonrpc2.server.RequestHandler;
 
 import java.text.DateFormat;
-import java.util.Date;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by g on 13.08.15.
  */
-public class Input implements IInput, RequestHandler {
+public class Input implements IInput, RequestHandler, IOnTickListener {
+    private static final int STATE_PRESSED = 1;
+    private static final int STATE_RELEASED = 2;
     private Player mPlayer;
     private IPairing mParing;
     private final String COMMAND_MUTE = "Input.mute";
@@ -33,16 +35,21 @@ public class Input implements IInput, RequestHandler {
     private final String COMMAND_PREV = "Input.prev";
     private final String COMMAND_NEXT = "Input.next";
     private final String COMMAND_MENU = "Input.menu";
-    private Map<String,Object> mResultRPC;
+    private Timer mTimer;
+    private ScheduledTask mTimerTask;
+    private String mLastCmd;
+    private Map<String, Object> mResultRPC;
 
     public Input(Player player, IPairing pairing) {
         mPlayer = player;
         mParing = pairing;
+        mTimerTask = new ScheduledTask(this);
+        mTimer = new Timer();
     }
 
     @Override
     public void back() {
-
+        mPlayer.stop();
     }
 
     @Override
@@ -61,13 +68,35 @@ public class Input implements IInput, RequestHandler {
     }
 
     @Override
-    public void left() {
-        mPlayer.left();
+    public void left(int state) {
+        switch (state) {
+            case STATE_PRESSED:
+                // start cycle
+                mLastCmd = COMMAND_LEFT;
+                mTimer.schedule(mTimerTask, 0, 200);
+                break;
+            case STATE_RELEASED:
+                // stop cycle
+                mTimer.cancel();
+                mPlayer.doSeek();
+                break;
+        }
     }
 
     @Override
-    public void right() {
-        mPlayer.right();
+    public void right(int state) {
+        switch (state) {
+            case STATE_PRESSED:
+                // start cycle
+                mLastCmd = COMMAND_RIGHT;
+                mTimer.schedule(mTimerTask, 0, 200);
+                break;
+            case STATE_RELEASED:
+                // stop cycle
+                mTimer.cancel();
+                mPlayer.doSeek();
+                break;
+        }
     }
 
     @Override
@@ -77,7 +106,7 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public void stop() {
-
+        mPlayer.stop();
     }
 
     @Override
@@ -130,6 +159,22 @@ public class Input implements IInput, RequestHandler {
 
     }
 
+    @Override
+    public void onTick() {
+        switch (mLastCmd) {
+            case COMMAND_LEFT:
+                mPlayer.left();
+                break;
+
+            case COMMAND_RIGHT:
+                mPlayer.right();
+                break;
+        }
+    }
+
+    public void release() {
+
+    }
     //--------------- JSONRPC2------------------
 
     @Override
@@ -141,6 +186,8 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public JSONRPC2Response process(JSONRPC2Request req, MessageContext messageContext) {
+        List params = (List) req.getParams();
+        int state = -1;
         switch (req.getMethod()) {
             case COMMAND_AUDIO:
                 audio();
@@ -150,9 +197,6 @@ public class Input implements IInput, RequestHandler {
                 break;
             case COMMAND_HOME:
                 home();
-                break;
-            case COMMAND_LEFT:
-                left();
                 break;
             case COMMAND_MENU:
                 menu();
@@ -169,8 +213,13 @@ public class Input implements IInput, RequestHandler {
             case COMMAND_PREV:
                 prev();
                 break;
+            case COMMAND_LEFT:
+                state = (int)((long)params.get(0));
+                left(state);
+                break;
             case COMMAND_RIGHT:
-                right();
+                state = (int)((long)params.get(0));
+                right(state);
                 break;
             case COMMAND_SELECT:
                 select();
@@ -190,6 +239,23 @@ public class Input implements IInput, RequestHandler {
             default:
                 return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, req.getID());
         }
-        return new JSONRPC2Response(mResultRPC);
+        return new JSONRPC2Response(mResultRPC, req.getID());
+    }
+
+    // timer
+    public static class ScheduledTask extends TimerTask {
+        private IOnTickListener listener;
+
+        public ScheduledTask(IOnTickListener listener) {
+            super();
+            this.listener = listener;
+        }
+
+        // Add your task here
+        public void run() {
+            if (listener != null) {
+                listener.onTick();
+            }
+        }
     }
 }

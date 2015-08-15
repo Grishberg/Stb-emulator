@@ -19,7 +19,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
 public class Main extends Application implements IView {
     private Stb mStb;
@@ -46,28 +45,24 @@ public class Main extends Application implements IView {
 
         mediaView = new MediaView();
         StackPane.setAlignment(mediaView, Pos.CENTER);
-        DoubleProperty width = mediaView.fitWidthProperty();
-        DoubleProperty height = mediaView.fitHeightProperty();
-        width.bind(Bindings.selectDouble(mediaView.sceneProperty(), "width").subtract(30));
-        height.bind(Bindings.selectDouble(mediaView.sceneProperty(), "height").subtract(30));
         mediaView.setPreserveRatio(true);
 
         // Add secret code label
         secretCodeLabel = new Label("Secret code: ");
         makeSelectable(secretCodeLabel);
         secretCodeLabel.setFont(new Font("Cambria", 18));
-        secretCodeLabel.setTextFill(Color.web("#0076a3"));
+        secretCodeLabel.setTextFill(Color.web("#ffffff"));
         StackPane.setAlignment(secretCodeLabel, Pos.TOP_CENTER);
 
         positionLabel = new Label("position: ");
         positionLabel.setFont(new Font("Cambria", 12));
         positionLabel.setTextFill(Color.web("#ffffff"));
-        StackPane.setAlignment(positionLabel, Pos.BOTTOM_RIGHT);
+        StackPane.setAlignment(positionLabel, Pos.BOTTOM_LEFT);
 
         volumeLabel = new Label("Volume: ");
         volumeLabel.setFont(new Font("Cambria", 12));
         volumeLabel.setTextFill(Color.web("#ffffff"));
-        StackPane.setAlignment(volumeLabel, Pos.BOTTOM_LEFT);
+        StackPane.setAlignment(volumeLabel, Pos.BOTTOM_RIGHT);
 
         StackPane rootMedia = new StackPane();
         rootMedia.setStyle("-fx-background-color: #000000;");
@@ -119,46 +114,13 @@ public class Main extends Application implements IView {
         root.getChildren().add(rootMedia);
 
         Scene scene = new Scene(root, 800, 600);
+        DoubleProperty width = mediaView.fitWidthProperty();
+        DoubleProperty height = mediaView.fitHeightProperty();
+        width.bind(Bindings.selectDouble(mediaView.sceneProperty(), "width").subtract(30));
+        height.bind(Bindings.selectDouble(mediaView.sceneProperty(), "height").subtract(30));
 
         primaryStage.setScene(scene);
         primaryStage.show();
-    }
-
-    private static String formatTime(Duration elapsed, Duration duration) {
-        int intElapsed = (int) Math.floor(elapsed.toSeconds());
-        int elapsedHours = intElapsed / (60 * 60);
-        if (elapsedHours > 0) {
-            intElapsed -= elapsedHours * 60 * 60;
-        }
-        int elapsedMinutes = intElapsed / 60;
-        int elapsedSeconds = intElapsed - elapsedHours * 60 * 60 - elapsedMinutes
-                * 60;
-
-        if (duration.greaterThan(Duration.ZERO)) {
-            int intDuration = (int) Math.floor(duration.toSeconds());
-            int durationHours = intDuration / (60 * 60);
-            if (durationHours > 0) {
-                intDuration -= durationHours * 60 * 60;
-            }
-            int durationMinutes = intDuration / 60;
-            int durationSeconds = intDuration - durationHours * 60 * 60
-                    - durationMinutes * 60;
-            if (durationHours > 0) {
-                return String.format("%d:%02d:%02d/%d:%02d:%02d", elapsedHours,
-                        elapsedMinutes, elapsedSeconds, durationHours, durationMinutes,
-                        durationSeconds);
-            } else {
-                return String.format("%02d:%02d/%02d:%02d", elapsedMinutes,
-                        elapsedSeconds, durationMinutes, durationSeconds);
-            }
-        } else {
-            if (elapsedHours > 0) {
-                return String.format("%d:%02d:%02d", elapsedHours, elapsedMinutes,
-                        elapsedSeconds);
-            } else {
-                return String.format("%02d:%02d", elapsedMinutes, elapsedSeconds);
-            }
-        }
     }
 
     @Override
@@ -261,7 +223,7 @@ public class Main extends Application implements IView {
                         "-fx-background-insets: 0;" +
                         "-fx-background-radius: 0;" +
                         "-fx-padding: 0;" +
-                        "-fx-text-inner-color:#0076a3;"
+                        "-fx-text-inner-color:#00f6f3;"
         );
         // the invisible label is a hack to get the textField to size like a label.
         Label invisibleLabel = new Label();
