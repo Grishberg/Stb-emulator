@@ -15,9 +15,10 @@ import java.util.*;
 /**
  * Created by g on 13.08.15.
  */
-public class Input implements IInput, RequestHandler, IOnTickListener {
+public class Input implements IInput, RequestHandler {
     private static final int STATE_PRESSED = 1;
     private static final int STATE_RELEASED = 2;
+    private static final int PRESS_ACTION_DELAY = 1000;
     private Player mPlayer;
     private IPairing mParing;
     private final String COMMAND_MUTE = "Input.mute";
@@ -35,16 +36,15 @@ public class Input implements IInput, RequestHandler, IOnTickListener {
     private final String COMMAND_PREV = "Input.prev";
     private final String COMMAND_NEXT = "Input.next";
     private final String COMMAND_MENU = "Input.menu";
+    private Date mLastPressTime;
     private Timer mTimer;
-    private ScheduledTask mTimerTask;
-    private String mLastCmd;
     private Map<String, Object> mResultRPC;
 
     public Input(Player player, IPairing pairing) {
         mPlayer = player;
         mParing = pairing;
-        mTimerTask = new ScheduledTask(this);
         mTimer = new Timer();
+        mLastPressTime = new Date();
     }
 
     @Override
@@ -71,14 +71,25 @@ public class Input implements IInput, RequestHandler, IOnTickListener {
     public void left(int state) {
         switch (state) {
             case STATE_PRESSED:
+                mTimer.cancel();
                 // start cycle
-                mLastCmd = COMMAND_LEFT;
-                mTimer.schedule(mTimerTask, 0, 200);
+                mTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        mPlayer.left();
+                    }
+                }, 0, 200);
                 break;
             case STATE_RELEASED:
                 // stop cycle
                 mTimer.cancel();
-                mPlayer.doSeek();
+                mTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        mPlayer.doSeek();
+                        mTimer.cancel();
+                    }
+                }, PRESS_ACTION_DELAY);
                 break;
         }
     }
@@ -87,14 +98,25 @@ public class Input implements IInput, RequestHandler, IOnTickListener {
     public void right(int state) {
         switch (state) {
             case STATE_PRESSED:
+                mTimer.cancel();
                 // start cycle
-                mLastCmd = COMMAND_RIGHT;
-                mTimer.schedule(mTimerTask, 0, 200);
+                mTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        mPlayer.right();
+                    }
+                }, 0, 200);
                 break;
             case STATE_RELEASED:
                 // stop cycle
                 mTimer.cancel();
-                mPlayer.doSeek();
+                mTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        mPlayer.doSeek();
+                        mTimer.cancel();
+                    }
+                }, PRESS_ACTION_DELAY);
                 break;
         }
     }
@@ -159,21 +181,10 @@ public class Input implements IInput, RequestHandler, IOnTickListener {
 
     }
 
-    @Override
-    public void onTick() {
-        switch (mLastCmd) {
-            case COMMAND_LEFT:
-                mPlayer.left();
-                break;
-
-            case COMMAND_RIGHT:
-                mPlayer.right();
-                break;
-        }
-    }
-
     public void release() {
-
+        if(mTimer != null) {
+            mTimer.cancel();
+        }
     }
     //--------------- JSONRPC2------------------
 
@@ -215,7 +226,7 @@ public class Input implements IInput, RequestHandler, IOnTickListener {
                 break;
             case COMMAND_LEFT:
                 state = (int)((long)params.get(0));
-                left(state);
+                left(state );
                 break;
             case COMMAND_RIGHT:
                 state = (int)((long)params.get(0));
@@ -240,22 +251,5 @@ public class Input implements IInput, RequestHandler, IOnTickListener {
                 return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, req.getID());
         }
         return new JSONRPC2Response(mResultRPC, req.getID());
-    }
-
-    // timer
-    public static class ScheduledTask extends TimerTask {
-        private IOnTickListener listener;
-
-        public ScheduledTask(IOnTickListener listener) {
-            super();
-            this.listener = listener;
-        }
-
-        // Add your task here
-        public void run() {
-            if (listener != null) {
-                listener.onTick();
-            }
-        }
     }
 }

@@ -108,6 +108,8 @@ public class Player implements IPlayer, RequestHandler {
      * create and setup MediaPlayer
      */
     private void initMediaPlayer() {
+        mCurrentPosition = Duration.seconds(0);
+        updateValues();
         mp.currentTimeProperty().addListener(new InvalidationListener() {
             public void invalidated(Observable ov) {
                 updateValues();
