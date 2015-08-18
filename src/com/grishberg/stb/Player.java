@@ -203,6 +203,9 @@ public class Player implements IPlayer, RequestHandler {
 
     public void left() {
         if (mp == null) return;
+        if(!mIsPositionChanging){
+            mView.onRewindStateChanged(true);
+        }
         mIsPositionChanging = true;
         mCurrentPosition = mCurrentPosition.add(Duration.seconds(-SEEK_DURATION_SEC));
         if (mCurrentPosition.lessThan(Duration.seconds(0))) {
@@ -213,6 +216,9 @@ public class Player implements IPlayer, RequestHandler {
 
     public void right() {
         if (mp == null) return;
+        if(!mIsPositionChanging){
+            mView.onRewindStateChanged(true);
+        }
         mIsPositionChanging = true;
         mCurrentPosition = mCurrentPosition.add(Duration.seconds(SEEK_DURATION_SEC));
         if (mCurrentPosition.greaterThan(mDuration)) {
@@ -222,6 +228,9 @@ public class Player implements IPlayer, RequestHandler {
     }
 
     public void doSeek() {
+        if(mIsPositionChanging){
+            mView.onRewindStateChanged(false);
+        }
         mState = PlayerState.BUFFERING;
         mIsPositionChanging = false;
         mp.seek(mCurrentPosition);
@@ -418,6 +427,7 @@ public class Player implements IPlayer, RequestHandler {
             case COMMAND_GET_STATUS:
                 mResult = getStatus();
                 break;
+
             case COMMAND_PLAY_CONTENT:
                 //TODO: check token
                 id = Math.abs((int) ((long) params.get(0)));

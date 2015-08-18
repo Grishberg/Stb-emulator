@@ -55,12 +55,12 @@ public class Main extends Application implements IView {
         StackPane.setAlignment(secretCodeLabel, Pos.TOP_CENTER);
 
         positionLabel = new Label("position: ");
-        positionLabel.setFont(new Font("Cambria", 12));
+        positionLabel.setFont(new Font("Cambria", 18));
         positionLabel.setTextFill(Color.web("#ffffff"));
         StackPane.setAlignment(positionLabel, Pos.BOTTOM_LEFT);
 
         volumeLabel = new Label("Volume: ");
-        volumeLabel.setFont(new Font("Cambria", 12));
+        volumeLabel.setFont(new Font("Cambria", 18));
         volumeLabel.setTextFill(Color.web("#ffffff"));
         StackPane.setAlignment(volumeLabel, Pos.BOTTOM_RIGHT);
 
@@ -83,7 +83,7 @@ public class Main extends Application implements IView {
         mediaBar.getChildren().add(spacer);
 
         // Add Time label
-        Label timeLabel = new Label("Time: ");
+        Label timeLabel = new Label(" ");
         mediaBar.getChildren().add(timeLabel);
 
         // Add time slider
@@ -91,11 +91,12 @@ public class Main extends Application implements IView {
         HBox.setHgrow(timeSlider, Priority.ALWAYS);
         timeSlider.setMinWidth(50);
         timeSlider.setMaxWidth(Double.MAX_VALUE);
+        timeSlider.setStyle("-fx-background-color: #FFFFFF;");
 
         mediaBar.getChildren().add(timeSlider);
 
         // Add the volume label
-        Label volumeLabel = new Label("Vol: ");
+        Label volumeLabel = new Label(" ");
         mediaBar.getChildren().add(volumeLabel);
 
         // Add Volume slider
@@ -162,6 +163,20 @@ public class Main extends Application implements IView {
 
     @Override
     public void onChangedState(Player.PlayerState state) {
+
+    }
+
+    @Override
+    public void onRewindStateChanged(final boolean isRewind) {
+        Platform.runLater(new Runnable() {
+            public void run() {
+                if(isRewind){
+                    timeSlider.setStyle("-fx-background-color: #0000FF;");
+                } else {
+                    timeSlider.setStyle("-fx-background-color: #FFFFFF;");
+                }
+            }
+        });
 
     }
 

@@ -14,4 +14,5 @@ public interface IView {
     void onChangedState(Player.PlayerState state);
     void onRegistered(String secretKey);
     void onFullScreen();
+    void onRewindStateChanged(boolean isRewind);
 }

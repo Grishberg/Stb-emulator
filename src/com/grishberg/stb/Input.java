@@ -38,6 +38,7 @@ public class Input implements IInput, RequestHandler {
     private final String COMMAND_MENU = "Input.menu";
     private Date mLastPressTime;
     private Timer mTimer;
+    private boolean mIsRewind;
     private Map<String, Object> mResultRPC;
 
     public Input(Player player, IPairing pairing) {
@@ -82,14 +83,8 @@ public class Input implements IInput, RequestHandler {
                 break;
             case STATE_RELEASED:
                 // stop cycle
+                mIsRewind = true;
                 mTimer.cancel();
-                mTimer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        mPlayer.doSeek();
-                        mTimer.cancel();
-                    }
-                }, PRESS_ACTION_DELAY);
                 break;
         }
     }
@@ -109,14 +104,8 @@ public class Input implements IInput, RequestHandler {
                 break;
             case STATE_RELEASED:
                 // stop cycle
+                mIsRewind = true;
                 mTimer.cancel();
-                mTimer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        mPlayer.doSeek();
-                        mTimer.cancel();
-                    }
-                }, PRESS_ACTION_DELAY);
                 break;
         }
     }
@@ -143,7 +132,11 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public void playPause() {
-        mPlayer.playPause();
+        if(!mIsRewind) {
+            mPlayer.playPause();
+        } else {
+            mPlayer.doSeek();
+        }
     }
 
     @Override
