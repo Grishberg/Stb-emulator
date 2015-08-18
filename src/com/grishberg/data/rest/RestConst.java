@@ -29,6 +29,10 @@ public final class RestConst {
         public static final String EK_TITLE = "EK-Title";
         public static final String STATE = "state";
 
+        public static final String ID = "id";
+        public static final String END_SEC = "endSec";
+        public static final String REASON = "reason";
+
         private field() {
         }
     }

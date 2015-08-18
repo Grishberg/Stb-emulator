@@ -28,13 +28,17 @@ public class Player implements IPlayer, RequestHandler {
     private static final String COMMAND_PLAY_STREAM = "Player.playStream";
     private static final String COMMAND_PLAY_CONTENT = "Player.playContent";
     private static final String COMMAND_GET_STATUS = "Player.getStatus";
-    private static final String NOTIFY_END_PLAYING = "onPlayEndNotify";
+    private static final String COMMAND_GET_PROPERTIES = "Player.getProperties";
+    private static final String NOTIFY_PLAYER_ON_STOP_CONTENT = "Player.onStopContent";
+    private static final String PARAM_PLAYER_NEXT = "PLAYER_NEXT";
+    private static final String PARAM_PLAYER_FWD = "PLAYER_FWD";
+    private static final String PARAM_PLAYER_STOP = "PLAYER_STOP";
     private static final String NOTIFY_ERROR = "onErrorNotify";
     private static final String NOTIFY_START_PLAYING = "onStartPlaying";
     private static final int SEEK_DURATION_SEC = 30;
 
     public enum PlayerState {
-        NONE, PLAYING, PAUSED, STOPPED, BUFFERING, ERROR, READY, ENDPLAYING
+        NONE, PLAYING, PAUSED, STOPPED, BUFFERING, ERROR, READY, END_PLAYING
     }
 
     private MediaPlayer mp;
@@ -92,8 +96,8 @@ public class Player implements IPlayer, RequestHandler {
             case PLAYING:
                 notification = new JSONRPC2Notification(NOTIFY_START_PLAYING);
                 break;
-            case ENDPLAYING:
-                notification = new JSONRPC2Notification(NOTIFY_END_PLAYING);
+            case END_PLAYING:
+                notifyOnStop(mEkId, (int) mCurrentPosition.toSeconds(), PARAM_PLAYER_STOP);
                 break;
             case ERROR:
                 notification = new JSONRPC2Notification(NOTIFY_ERROR);
@@ -102,6 +106,16 @@ public class Player implements IPlayer, RequestHandler {
         if (notification != null) {
             mPlayerObserver.onNotify(notification.toJSONString());
         }
+    }
+
+    private void notifyOnStop(int id, int endSec, String reason) {
+        JSONRPC2Notification notification = null;
+        Map<String, Object> result = new HashMap<>();
+        result.put(RestConst.field.ID, id);
+        result.put(RestConst.field.END_SEC, endSec);
+        result.put(RestConst.field.REASON, reason);
+
+        mPlayerObserver.onNotify(notification.toJSONString());
     }
 
     /**
@@ -174,7 +188,7 @@ public class Player implements IPlayer, RequestHandler {
                 System.out.println("----------Player on end of media");
                 stopRequested = true;
                 atEndOfMedia = true;
-                mState = PlayerState.ENDPLAYING;
+                mState = PlayerState.END_PLAYING;
                 onStateChanged();
             }
         });
@@ -243,8 +257,8 @@ public class Player implements IPlayer, RequestHandler {
         mView.onChangedVolume(mVolume);
     }
 
-    public void stop(){
-        if(mp != null){
+    public void stop() {
+        if (mp != null) {
             mp.stop();
         }
     }
@@ -386,7 +400,7 @@ public class Player implements IPlayer, RequestHandler {
 
     @Override
     public String[] handledRequests() {
-        return new String[]{COMMAND_PLAY_CONTENT, COMMAND_PLAY_STREAM, COMMAND_GET_STATUS};
+        return new String[]{COMMAND_PLAY_CONTENT, COMMAND_PLAY_STREAM, COMMAND_GET_STATUS, COMMAND_GET_PROPERTIES};
     }
 
     public void fullscreen() {
