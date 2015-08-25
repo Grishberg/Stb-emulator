@@ -17,6 +17,7 @@ import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.web.WebView;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
@@ -31,7 +32,7 @@ public class Main extends Application implements IView {
     private HBox mediaBar;
     private Stage mPrimaryStage;
     private boolean isFullScreen = false;
-
+    private WebView mWebview;
     public Main() {
     }
 
@@ -42,6 +43,9 @@ public class Main extends Application implements IView {
         //Group root = new Group();
 
         mStb = new Stb(this);
+        mWebview = new WebView();
+        StackPane.setAlignment(mWebview, Pos.CENTER);
+        mWebview.setVisible(false);
 
         mediaView = new MediaView();
         StackPane.setAlignment(mediaView, Pos.CENTER);
@@ -50,7 +54,7 @@ public class Main extends Application implements IView {
         // Add secret code label
         secretCodeLabel = new Label("Secret code: ");
         makeSelectable(secretCodeLabel);
-        secretCodeLabel.setFont(new Font("Cambria", 18));
+        secretCodeLabel.setFont(new Font("Cambria", 24));
         secretCodeLabel.setTextFill(Color.web("#ffffff"));
         StackPane.setAlignment(secretCodeLabel, Pos.TOP_CENTER);
 
@@ -68,6 +72,7 @@ public class Main extends Application implements IView {
         rootMedia.setStyle("-fx-background-color: #000000;");
 
         rootMedia.getChildren().add(mediaView);
+        rootMedia.getChildren().add(mWebview);
         rootMedia.getChildren().add(secretCodeLabel);
         rootMedia.getChildren().add(positionLabel);
         rootMedia.getChildren().add(volumeLabel);
@@ -125,9 +130,23 @@ public class Main extends Application implements IView {
     }
 
     @Override
-    public void setMediaPlayer(MediaPlayer mediaPlayer) {
+    public void setMediaPlayer(final MediaPlayer mediaPlayer) {
+        Platform.runLater(new Runnable() {
+            public void run() {
+                mediaView.setVisible(true);
+                mWebview.setVisible(false);
+                mWebview.getEngine().load(null);
+                mediaView.setMediaPlayer(mediaPlayer);
+            }
+        });
+    }
 
-        mediaView.setMediaPlayer(mediaPlayer);
+    @Override
+    public void playYouTube(String id) {
+        mediaView.setVisible(false);
+        mWebview.setVisible(true);
+        String url = "http://www.youtube.com/embed/"+id + "?autoplay=1";
+        mWebview.getEngine().load(url);
     }
 
     @Override
@@ -224,21 +243,22 @@ public class Main extends Application implements IView {
         if (mStb != null) {
             mStb.release();
         }
+        mWebview.getEngine().load("");
     }
 
     private Label makeSelectable(Label label) {
         StackPane textStack = new StackPane();
         TextField textField = new TextField(label.getText());
-        textField.setFont(new Font("Cambria", 16));
-        textField.setMinWidth(220);
-        label.setMinWidth(220);
+        textField.setFont(new Font("Cambria", 22));
+        textField.setMinWidth(300);
+        label.setMinWidth(300);
         textField.setEditable(false);
         textField.setStyle(
                 "-fx-background-color: transparent; " +
                         "-fx-background-insets: 0;" +
                         "-fx-background-radius: 0;" +
                         "-fx-padding: 0;" +
-                        "-fx-text-inner-color:#00f6f3;"
+                        "-fx-text-inner-color:#FFFFFF;"
         );
         // the invisible label is a hack to get the textField to size like a label.
         Label invisibleLabel = new Label();

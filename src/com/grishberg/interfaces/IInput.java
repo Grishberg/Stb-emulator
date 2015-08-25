@@ -5,11 +5,11 @@ package com.grishberg.interfaces;
  */
 public interface IInput {
     void back();
-    void up();
-    void down();
+    void up(boolean state);
+    void down(boolean state);
     void home();
-    void left(int state);
-    void right(int state);
+    void left(boolean state);
+    void right(boolean state);
     void select();
     void stop();
     void volumeUp();

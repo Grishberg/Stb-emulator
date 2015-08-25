@@ -10,5 +10,6 @@ import java.util.Map;
 public interface IPlayer {
     void playContent(int id, int episode, String studio, int startSec);
     void playStream(int idStream, int startSec);
+    void playYoutube(String id, int startSec);
     Map<String,Object> getStatus();
 }

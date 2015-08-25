@@ -54,12 +54,12 @@ public class Input implements IInput, RequestHandler {
     }
 
     @Override
-    public void up() {
+    public void up(boolean state) {
 
     }
 
     @Override
-    public void down() {
+    public void down(boolean state) {
 
     }
 
@@ -69,44 +69,38 @@ public class Input implements IInput, RequestHandler {
     }
 
     @Override
-    public void left(int state) {
-        switch (state) {
-            case STATE_PRESSED:
-                mTimer.cancel();
-                // start cycle
-                mTimer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        mPlayer.left();
-                    }
-                }, 0, 200);
-                break;
-            case STATE_RELEASED:
-                // stop cycle
-                mIsRewind = true;
-                mTimer.cancel();
-                break;
+    public void left(boolean state) {
+        if (state) {
+            mTimer.cancel();
+            // start cycle
+            mTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    mPlayer.left();
+                }
+            }, 0, 200);
+        } else {
+            // stop cycle
+            mIsRewind = true;
+            mTimer.cancel();
         }
     }
 
     @Override
-    public void right(int state) {
-        switch (state) {
-            case STATE_PRESSED:
-                mTimer.cancel();
-                // start cycle
-                mTimer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        mPlayer.right();
-                    }
-                }, 0, 200);
-                break;
-            case STATE_RELEASED:
-                // stop cycle
-                mIsRewind = true;
-                mTimer.cancel();
-                break;
+    public void right(boolean state) {
+        if (state) {
+            mTimer.cancel();
+            // start cycle
+            mTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    mPlayer.right();
+                }
+            }, 0, 200);
+        } else {
+            // stop cycle
+            mIsRewind = true;
+            mTimer.cancel();
         }
     }
 
@@ -132,7 +126,7 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public void playPause() {
-        if(!mIsRewind) {
+        if (!mIsRewind) {
             mPlayer.playPause();
         } else {
             mPlayer.doSeek();
@@ -175,7 +169,7 @@ public class Input implements IInput, RequestHandler {
     }
 
     public void release() {
-        if(mTimer != null) {
+        if (mTimer != null) {
             mTimer.cancel();
         }
     }
@@ -191,7 +185,8 @@ public class Input implements IInput, RequestHandler {
     @Override
     public JSONRPC2Response process(JSONRPC2Request req, MessageContext messageContext) {
         List params = (List) req.getParams();
-        int state = -1;
+        String result = "";
+        boolean state = false;
         switch (req.getMethod()) {
             case COMMAND_AUDIO:
                 audio();
@@ -218,11 +213,11 @@ public class Input implements IInput, RequestHandler {
                 prev();
                 break;
             case COMMAND_LEFT:
-                state = (int)((long)params.get(0));
-                left(state );
+                state = (boolean) params.get(0);
+                left(state);
                 break;
             case COMMAND_RIGHT:
-                state = (int)((long)params.get(0));
+                state = (boolean) params.get(0);
                 right(state);
                 break;
             case COMMAND_SELECT:
@@ -232,7 +227,8 @@ public class Input implements IInput, RequestHandler {
                 subtitle();
                 break;
             case COMMAND_UP:
-                up();
+                state = (boolean) params.get(0);
+                up(state);
                 break;
             case COMMAND_VOLUME_DOWN:
                 volumeDown();
@@ -243,6 +239,6 @@ public class Input implements IInput, RequestHandler {
             default:
                 return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, req.getID());
         }
-        return new JSONRPC2Response(mResultRPC, req.getID());
+        return new JSONRPC2Response(result, req.getID());
     }
 }

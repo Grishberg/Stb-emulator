@@ -34,7 +34,7 @@ public class Player implements IPlayer, RequestHandler {
     private static final String PARAM_PLAYER_FWD = "PLAYER_FWD";
     private static final String PARAM_PLAYER_STOP = "PLAYER_STOP";
     private static final String NOTIFY_ERROR = "onErrorNotify";
-    private static final String NOTIFY_START_PLAYING = "onStartPlaying";
+    private static final String NOTIFY_START_PLAYING = "Player.onStartPlaying";
     private static final int SEEK_DURATION_SEC = 30;
 
     public enum PlayerState {
@@ -55,6 +55,7 @@ public class Player implements IPlayer, RequestHandler {
     private int mEkId;
     private int mEpId;
     private int mIdStream;
+    private String mYoutubeId;
     private IPairing mPairing; // for checking token
     private IPlayerObserver mPlayerObserver;
     private double mVolume = 100;
@@ -71,11 +72,23 @@ public class Player implements IPlayer, RequestHandler {
             , "http://vevoplaylist-live.hls.adaptive.level3.net/vevo/ch1/appleman.m3u8"
             , "http://srv6.zoeweb.tv:1935/z330-live/stream/playlist.m3u8"
     };
+
+    private static final String[] CONTENT_STREAM = {
+            "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8"
+    };
+
+
     /**
      * media content title
      */
     private static final String[] CONTENT_TITLE = {
             "jobs"
+            , "live tv 1"
+            , "live tv 2"
+    };
+
+    private static final String[] CONTENT_STREAM_TITLE = {
+            "def"
             , "live tv 1"
             , "live tv 2"
     };
@@ -311,10 +324,11 @@ public class Player implements IPlayer, RequestHandler {
                 }
 
                 double position = -1;
-                if (!mDuration.isUnknown()) {
+                String timeCaption = "";
+                if (mDuration != null && !mDuration.isUnknown()) {
                     position = mCurrentPosition.divide(mDuration).toMillis() * 100.0;
+                    timeCaption = formatTime(mCurrentPosition, mDuration);
                 }
-                String timeCaption = formatTime(mCurrentPosition, mDuration);
                 mView.onChangedTimePosition(position, timeCaption);
             }
         });
@@ -328,6 +342,10 @@ public class Player implements IPlayer, RequestHandler {
         int index = id % CONTENT.length;
         String content = CONTENT[index];
         mContentTitle = CONTENT_TITLE[index];
+        //stop old media
+        if(mp != null && mp.getStatus() == MediaPlayer.Status.PLAYING){
+            mp.stop();
+        }
 
         Media media = new Media(content);
         mp = new MediaPlayer(media);
@@ -339,15 +357,29 @@ public class Player implements IPlayer, RequestHandler {
     @Override
     public void playStream(int idStream, int startSec) {
         mIdStream = idStream;
-        int index = idStream % CONTENT.length;
-        String content = CONTENT[index];
-        mContentTitle = CONTENT_TITLE[index];
-
+        int index = idStream % CONTENT_STREAM.length;
+        String content = CONTENT_STREAM[index];
+        mContentTitle = CONTENT_STREAM_TITLE[index];
+        //stop old media
+        if(mp != null && mp.getStatus() == MediaPlayer.Status.PLAYING){
+            mp.stop();
+        }
         Media media = new Media(content);
         mp = new MediaPlayer(media);
         mp.setAutoPlay(true);
         initMediaPlayer();
         mView.setMediaPlayer(mp);
+    }
+
+    @Override
+    public void playYoutube(String id, int startSec) {
+        //stop old media
+        if(mp != null && mp.getStatus() == MediaPlayer.Status.PLAYING){
+            mp.stop();
+        }
+        mYoutubeId = id;
+        mContentTitle = "youtube";
+        mView.playYouTube(id);
     }
 
     @Override
