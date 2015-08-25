@@ -321,6 +321,7 @@ public class Player implements IPlayer, RequestHandler {
                         mState = PlayerState.PLAYING;
                         onStateChanged();
                     }
+                    mCurrentPosition = currentTime;
                 }
 
                 double position = -1;

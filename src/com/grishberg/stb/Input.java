@@ -71,8 +71,8 @@ public class Input implements IInput, RequestHandler {
     @Override
     public void left(boolean state) {
         if (state) {
-            mTimer.cancel();
             // start cycle
+            mTimer = new Timer();
             mTimer.schedule(new TimerTask() {
                 @Override
                 public void run() {
@@ -89,8 +89,8 @@ public class Input implements IInput, RequestHandler {
     @Override
     public void right(boolean state) {
         if (state) {
-            mTimer.cancel();
             // start cycle
+            mTimer = new Timer();
             mTimer.schedule(new TimerTask() {
                 @Override
                 public void run() {
@@ -184,61 +184,67 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public JSONRPC2Response process(JSONRPC2Request req, MessageContext messageContext) {
-        List params = (List) req.getParams();
         String result = "";
-        boolean state = false;
-        switch (req.getMethod()) {
-            case COMMAND_AUDIO:
-                audio();
-                break;
-            case COMMAND_FULLSCREEN:
-                fullscreen();
-                break;
-            case COMMAND_HOME:
-                home();
-                break;
-            case COMMAND_MENU:
-                menu();
-                break;
-            case COMMAND_MUTE:
-                mute();
-                break;
-            case COMMAND_NEXT:
-                next();
-                break;
-            case COMMAND_PLAY_PAUSE:
-                playPause();
-                break;
-            case COMMAND_PREV:
-                prev();
-                break;
-            case COMMAND_LEFT:
-                state = (boolean) params.get(0);
-                left(state);
-                break;
-            case COMMAND_RIGHT:
-                state = (boolean) params.get(0);
-                right(state);
-                break;
-            case COMMAND_SELECT:
-                select();
-                break;
-            case COMMAND_SUBS:
-                subtitle();
-                break;
-            case COMMAND_UP:
-                state = (boolean) params.get(0);
-                up(state);
-                break;
-            case COMMAND_VOLUME_DOWN:
-                volumeDown();
-                break;
-            case COMMAND_VOLUME_UP:
-                volumeUp();
-                break;
-            default:
-                return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, req.getID());
+        try{
+            List params = (List) req.getParams();
+            boolean state = false;
+            switch (req.getMethod()) {
+                case COMMAND_AUDIO:
+                    audio();
+                    break;
+                case COMMAND_FULLSCREEN:
+                    fullscreen();
+                    break;
+                case COMMAND_HOME:
+                    home();
+                    break;
+                case COMMAND_MENU:
+                    menu();
+                    break;
+                case COMMAND_MUTE:
+                    mute();
+                    break;
+                case COMMAND_NEXT:
+                    next();
+                    break;
+                case COMMAND_PLAY_PAUSE:
+                    playPause();
+                    break;
+                case COMMAND_PREV:
+                    prev();
+                    break;
+                case COMMAND_LEFT:
+                    state = (boolean) params.get(0);
+                    left(state);
+                    break;
+                case COMMAND_RIGHT:
+                    state = (boolean) params.get(0);
+                    right(state);
+                    break;
+                case COMMAND_SELECT:
+                    select();
+                    break;
+                case COMMAND_SUBS:
+                    subtitle();
+                    break;
+                case COMMAND_UP:
+                    state = (boolean) params.get(0);
+                    up(state);
+                    break;
+                case COMMAND_VOLUME_DOWN:
+                    volumeDown();
+                    break;
+                case COMMAND_VOLUME_UP:
+                    volumeUp();
+                    break;
+                default:
+                    return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, req.getID());
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+            return new JSONRPC2Response(new JSONRPC2Error(-1,e.toString()), req.getID());
         }
+
         return new JSONRPC2Response(result, req.getID());
     }
 }
