@@ -74,7 +74,7 @@ public class Player implements IPlayer, RequestHandler {
     };
 
     private static final String[] CONTENT_STREAM = {
-            "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8"
+            "http://3.hls.bolshoe.tv/1/streaming/discovery/tvrec/playlist.m3u8"
     };
 
 
@@ -88,9 +88,7 @@ public class Player implements IPlayer, RequestHandler {
     };
 
     private static final String[] CONTENT_STREAM_TITLE = {
-            "def"
-            , "live tv 1"
-            , "live tv 2"
+            "discovery channel"
     };
 
     public Player(IView view, IPairing pairing, IPlayerObserver playerObserver) {
