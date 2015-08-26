@@ -33,6 +33,7 @@ public class Pairing implements RequestHandler, IPairing {
         Profile profile = new Profile(id, name);
         mTokens.put(token, profile);
         mTokenObserver.registerDevice();
+        mTokenObserver.onDeviceConnected(name);
         return "";
     }
 

@@ -21,6 +21,7 @@ public class Input implements IInput, RequestHandler {
     private static final int PRESS_ACTION_DELAY = 1000;
     private Player mPlayer;
     private IPairing mParing;
+    private final String COMMAND_BACK = "Input.back";
     private final String COMMAND_MUTE = "Input.mute";
     private final String COMMAND_SUBS = "Input.subtitle";
     private final String COMMAND_PLAY_PAUSE = "Input.playPause";
@@ -50,7 +51,11 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public void back() {
-        mPlayer.stop();
+        if (mIsRewind) {
+            mPlayer.cancelRewind();
+        } else {
+            mPlayer.stop();
+        }
     }
 
     @Override
@@ -72,6 +77,7 @@ public class Input implements IInput, RequestHandler {
     public void left(boolean state) {
         if (state) {
             // start cycle
+            mIsRewind = true;
             mTimer = new Timer();
             mTimer.schedule(new TimerTask() {
                 @Override
@@ -81,7 +87,6 @@ public class Input implements IInput, RequestHandler {
             }, 0, 200);
         } else {
             // stop cycle
-            mIsRewind = true;
             mTimer.cancel();
         }
     }
@@ -90,6 +95,7 @@ public class Input implements IInput, RequestHandler {
     public void right(boolean state) {
         if (state) {
             // start cycle
+            mIsRewind = true;
             mTimer = new Timer();
             mTimer.schedule(new TimerTask() {
                 @Override
@@ -99,7 +105,6 @@ public class Input implements IInput, RequestHandler {
             }, 0, 200);
         } else {
             // stop cycle
-            mIsRewind = true;
             mTimer.cancel();
         }
     }
@@ -130,6 +135,7 @@ public class Input implements IInput, RequestHandler {
             mPlayer.playPause();
         } else {
             mPlayer.doSeek();
+            mIsRewind = false;
         }
     }
 
@@ -177,7 +183,10 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public String[] handledRequests() {
-        return new String[]{COMMAND_MUTE, COMMAND_SUBS, COMMAND_PLAY_PAUSE, COMMAND_VOLUME_DOWN
+        return new String[]{
+                COMMAND_BACK
+                , COMMAND_MUTE
+                , COMMAND_SUBS, COMMAND_PLAY_PAUSE, COMMAND_VOLUME_DOWN
                 , COMMAND_VOLUME_UP, COMMAND_SELECT, COMMAND_RIGHT, COMMAND_LEFT, COMMAND_HOME
                 , COMMAND_UP, COMMAND_AUDIO, COMMAND_FULLSCREEN, COMMAND_PREV, COMMAND_NEXT, COMMAND_MENU};
     }
@@ -185,10 +194,13 @@ public class Input implements IInput, RequestHandler {
     @Override
     public JSONRPC2Response process(JSONRPC2Request req, MessageContext messageContext) {
         String result = "";
-        try{
+        try {
             List params = (List) req.getParams();
             boolean state = false;
             switch (req.getMethod()) {
+                case COMMAND_BACK:
+                    back();
+                    break;
                 case COMMAND_AUDIO:
                     audio();
                     break;
@@ -240,9 +252,9 @@ public class Input implements IInput, RequestHandler {
                 default:
                     return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, req.getID());
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
-            return new JSONRPC2Response(new JSONRPC2Error(-1,e.toString()), req.getID());
+            return new JSONRPC2Response(new JSONRPC2Error(-1, e.toString()), req.getID());
         }
 
         return new JSONRPC2Response(result, req.getID());

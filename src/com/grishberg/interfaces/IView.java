@@ -8,6 +8,7 @@ import javafx.scene.media.MediaPlayer;
  * видео контейнейр, реагирующий на события плеера
  */
 public interface IView {
+    void onDeviceConnected(String deviceName);
     void playYouTube(String id);
     void setMediaPlayer(MediaPlayer mediaPlayer);
     void onChangedTimePosition(double currentPosition, String caption);

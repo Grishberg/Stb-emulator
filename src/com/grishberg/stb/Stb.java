@@ -126,6 +126,11 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
 
     }
 
+    @Override
+    public void onDeviceConnected(String name) {
+        mView.onDeviceConnected(name);
+    }
+
     /**
      * receive message from mobile device event
      * @param queue client's queue name for reply

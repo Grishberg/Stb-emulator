@@ -58,12 +58,12 @@ public class Main extends Application implements IView {
         secretCodeLabel.setTextFill(Color.web("#ffffff"));
         StackPane.setAlignment(secretCodeLabel, Pos.TOP_CENTER);
 
-        positionLabel = new Label("position: ");
+        positionLabel = new Label("");
         positionLabel.setFont(new Font("Cambria", 18));
         positionLabel.setTextFill(Color.web("#ffffff"));
         StackPane.setAlignment(positionLabel, Pos.BOTTOM_LEFT);
 
-        volumeLabel = new Label("Volume: ");
+        volumeLabel = new Label("");
         volumeLabel.setFont(new Font("Cambria", 18));
         volumeLabel.setTextFill(Color.web("#ffffff"));
         StackPane.setAlignment(volumeLabel, Pos.BOTTOM_RIGHT);
@@ -150,9 +150,18 @@ public class Main extends Application implements IView {
     }
 
     @Override
+    public void onDeviceConnected(final String deviceName) {
+        Platform.runLater(new Runnable() {
+            public void run() {
+                positionLabel.setText(String.format("device %s connected",deviceName));
+            }
+        });
+    }
+
+    @Override
     public void onChangedTimePosition(final double currentPosition, final String caption) {
         if (currentPosition < 0) {
-            positionLabel.setText("--- ");
+            positionLabel.setText("start play content...");
             timeSlider.setDisable(true);
         } else {
             positionLabel.setText(String.format("Position %d%% %s", (int) currentPosition, caption));
@@ -230,8 +239,8 @@ public class Main extends Application implements IView {
         } else {
             mPrimaryStage.setX(bounds.getMinX());
             mPrimaryStage.setY(bounds.getMinY());
-            mPrimaryStage.setWidth(800);
-            mPrimaryStage.setHeight(600);
+            mPrimaryStage.setWidth(640);
+            mPrimaryStage.setHeight(400);
             isFullScreen = !isFullScreen;
         }
     }
@@ -243,7 +252,7 @@ public class Main extends Application implements IView {
         if (mStb != null) {
             mStb.release();
         }
-        mWebview.getEngine().load("");
+        mWebview.getEngine().load(null);
     }
 
     private Label makeSelectable(Label label) {

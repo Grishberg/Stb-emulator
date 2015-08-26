@@ -249,6 +249,11 @@ public class Player implements IPlayer, RequestHandler {
         mp.seek(mCurrentPosition);
     }
 
+    public void cancelRewind(){
+        mIsPositionChanging = false;
+        mView.onRewindStateChanged(false);
+    }
+
     public void mute() {
         if (mp == null) return;
         if (mVolume != 0) {
