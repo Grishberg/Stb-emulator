@@ -33,6 +33,7 @@ public class Main extends Application implements IView {
     private Stage mPrimaryStage;
     private boolean isFullScreen = false;
     private WebView mWebview;
+    private TextField textField;
     public Main() {
     }
 
@@ -133,6 +134,13 @@ public class Main extends Application implements IView {
     public void setMediaPlayer(final MediaPlayer mediaPlayer) {
         Platform.runLater(new Runnable() {
             public void run() {
+                textField.setStyle(
+                        "-fx-background-color: transparent; " +
+                                "-fx-background-insets: 0;" +
+                                "-fx-background-radius: 0;" +
+                                "-fx-padding: 0;" +
+                                "-fx-text-inner-color:#FFFFFF;"
+                );
                 mediaView.setVisible(true);
                 mWebview.setVisible(false);
                 mWebview.getEngine().load(null);
@@ -147,6 +155,13 @@ public class Main extends Application implements IView {
             public void run() {
                 mediaView.setVisible(false);
                 mWebview.setVisible(true);
+                textField.setStyle(
+                        "-fx-background-color: transparent; " +
+                                "-fx-background-insets: 0;" +
+                                "-fx-background-radius: 0;" +
+                                "-fx-padding: 0;" +
+                                "-fx-text-inner-color:#444444;"
+                );
                 String url = "http://www.youtube.com/watch?v=" + id + "&feature=player_embedded";
                 //String url = "http://www.youtube.com/embed/" + id + "?autoplay=1";
                 mWebview.getEngine().load(url);
@@ -262,7 +277,7 @@ public class Main extends Application implements IView {
 
     private Label makeSelectable(Label label) {
         StackPane textStack = new StackPane();
-        TextField textField = new TextField(label.getText());
+        textField = new TextField(label.getText());
         textField.setFont(new Font("Cambria", 22));
         textField.setMinWidth(300);
         label.setMinWidth(300);

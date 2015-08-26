@@ -111,7 +111,10 @@ public class Input implements IInput, RequestHandler {
 
     @Override
     public void select() {
-
+        if(mIsRewind) {
+            mPlayer.doSeek();
+            mIsRewind = false;
+        }
     }
 
     @Override
@@ -133,9 +136,6 @@ public class Input implements IInput, RequestHandler {
     public void playPause() {
         if (!mIsRewind) {
             mPlayer.playPause();
-        } else {
-            mPlayer.doSeek();
-            mIsRewind = false;
         }
     }
 
@@ -186,9 +186,20 @@ public class Input implements IInput, RequestHandler {
         return new String[]{
                 COMMAND_BACK
                 , COMMAND_MUTE
-                , COMMAND_SUBS, COMMAND_PLAY_PAUSE, COMMAND_VOLUME_DOWN
-                , COMMAND_VOLUME_UP, COMMAND_SELECT, COMMAND_RIGHT, COMMAND_LEFT, COMMAND_HOME
-                , COMMAND_UP, COMMAND_AUDIO, COMMAND_FULLSCREEN, COMMAND_PREV, COMMAND_NEXT, COMMAND_MENU};
+                , COMMAND_SUBS
+                , COMMAND_PLAY_PAUSE
+                , COMMAND_VOLUME_DOWN
+                , COMMAND_VOLUME_UP
+                , COMMAND_SELECT
+                , COMMAND_RIGHT
+                , COMMAND_LEFT
+                , COMMAND_HOME
+                , COMMAND_UP
+                , COMMAND_AUDIO
+                , COMMAND_FULLSCREEN
+                , COMMAND_PREV
+                , COMMAND_NEXT
+                , COMMAND_MENU};
     }
 
     @Override
