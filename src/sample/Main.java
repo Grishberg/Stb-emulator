@@ -147,7 +147,8 @@ public class Main extends Application implements IView {
             public void run() {
                 mediaView.setVisible(false);
                 mWebview.setVisible(true);
-                String url = "http://www.youtube.com/embed/" + id + "?autoplay=1";
+                String url = "http://www.youtube.com/watch?v=" + id + "&feature=player_embedded";
+                //String url = "http://www.youtube.com/embed/" + id + "?autoplay=1";
                 mWebview.getEngine().load(url);
             }
         });
@@ -157,7 +158,7 @@ public class Main extends Application implements IView {
     public void onDeviceConnected(final String deviceName) {
         Platform.runLater(new Runnable() {
             public void run() {
-                positionLabel.setText(String.format("device %s connected",deviceName));
+                positionLabel.setText(String.format("device %s connected", deviceName));
             }
         });
     }

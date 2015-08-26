@@ -245,7 +245,9 @@ public class Player implements IPlayer, RequestHandler {
         }
         mState = PlayerState.BUFFERING;
         mIsPositionChanging = false;
-        mp.seek(mCurrentPosition);
+        if(mp != null) {
+            mp.seek(mCurrentPosition);
+        }
     }
 
     public void cancelRewind(){
@@ -261,7 +263,9 @@ public class Player implements IPlayer, RequestHandler {
         } else {
             mVolume = mPrevVolume;
         }
-        mp.setVolume(mVolume / 100.0);
+        if(mp != null) {
+            mp.setVolume(mVolume / 100.0);
+        }
         mView.onChangedVolume(mVolume);
     }
 
@@ -270,7 +274,9 @@ public class Player implements IPlayer, RequestHandler {
         if (mVolume < 0) {
             mVolume = 0;
         }
-        mp.setVolume(mVolume / 100.0);
+        if(mp != null) {
+            mp.setVolume(mVolume / 100.0);
+        }
         mView.onChangedVolume(mVolume);
     }
 
@@ -279,7 +285,9 @@ public class Player implements IPlayer, RequestHandler {
         if (mVolume > 100) {
             mVolume = 100;
         }
-        mp.setVolume(mVolume / 100.0);
+        if(mp != null) {
+            mp.setVolume(mVolume / 100.0);
+        }
         mView.onChangedVolume(mVolume);
     }
 
