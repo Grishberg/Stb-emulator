@@ -119,7 +119,7 @@ public class Main extends Application implements IView {
         root.getChildren().add(mediaBar);
         root.getChildren().add(rootMedia);
 
-        Scene scene = new Scene(root, 800, 600);
+        Scene scene = new Scene(root, 640, 380);
         DoubleProperty width = mediaView.fitWidthProperty();
         DoubleProperty height = mediaView.fitHeightProperty();
         width.bind(Bindings.selectDouble(mediaView.sceneProperty(), "width").subtract(30));
@@ -142,11 +142,15 @@ public class Main extends Application implements IView {
     }
 
     @Override
-    public void playYouTube(String id) {
-        mediaView.setVisible(false);
-        mWebview.setVisible(true);
-        String url = "http://www.youtube.com/embed/"+id + "?autoplay=1";
-        mWebview.getEngine().load(url);
+    public void playYouTube(final String id) {
+        Platform.runLater(new Runnable() {
+            public void run() {
+                mediaView.setVisible(false);
+                mWebview.setVisible(true);
+                String url = "http://www.youtube.com/embed/" + id + "?autoplay=1";
+                mWebview.getEngine().load(url);
+            }
+        });
     }
 
     @Override

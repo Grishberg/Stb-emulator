@@ -27,6 +27,7 @@ import java.util.Map;
 public class Player implements IPlayer, RequestHandler {
     private static final String COMMAND_PLAY_STREAM = "Player.playStream";
     private static final String COMMAND_PLAY_CONTENT = "Player.playContent";
+    private static final String COMMAND_PLAY_YOUTUBE = "Player.playYoutube";
     private static final String COMMAND_GET_STATUS = "Player.getStatus";
     private static final String COMMAND_GET_PROPERTIES = "Player.getProperties";
     private static final String NOTIFY_PLAYER_ON_STOP_CONTENT = "Player.onStopContent";
@@ -445,7 +446,11 @@ public class Player implements IPlayer, RequestHandler {
 
     @Override
     public String[] handledRequests() {
-        return new String[]{COMMAND_PLAY_CONTENT, COMMAND_PLAY_STREAM, COMMAND_GET_STATUS, COMMAND_GET_PROPERTIES};
+        return new String[]{COMMAND_PLAY_CONTENT
+                , COMMAND_PLAY_STREAM
+                , COMMAND_PLAY_YOUTUBE
+                , COMMAND_GET_STATUS
+                , COMMAND_GET_PROPERTIES};
     }
 
     public void fullscreen() {
@@ -457,13 +462,18 @@ public class Player implements IPlayer, RequestHandler {
         mResult = null;
         List params = (List) jsonrpc2Request.getParams();
         String token = null;
+        String youtubeId = null;
         int id;
         int startSec;
         switch (jsonrpc2Request.getMethod()) {
             case COMMAND_GET_STATUS:
                 mResult = getStatus();
                 break;
-
+            case COMMAND_PLAY_YOUTUBE:
+                youtubeId = (String) params.get(0);
+                startSec = (int) ((long) params.get(1));
+                playYoutube(youtubeId, startSec);
+                break;
             case COMMAND_PLAY_CONTENT:
                 //TODO: check token
                 id = Math.abs((int) ((long) params.get(0)));
