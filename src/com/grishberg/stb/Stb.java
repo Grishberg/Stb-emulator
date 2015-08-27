@@ -208,7 +208,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
             mId = prop.getProperty("device_id");
             mLogger.log("read mac from config");
             mLogger.log("    mac = " + mMac);
-            mLogger.log("    dev_id = " + mId);
+            mLogger.log("    device_id = " + mId);
             if (mMac == null || mMac.length() == 0) {
                 mMac = generateMac();
             }
@@ -219,9 +219,9 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
             ex.printStackTrace();
             mMac = generateMac();
             mId = generateId();
-            mLogger.log("can't read config.properties, generating mac and dev_id");
+            mLogger.log("can't read config.properties, generating mac and device_id");
             mLogger.log("    mac = " + mMac);
-            mLogger.log("    dev_id = " + mId);
+            mLogger.log("    device_id = " + mId);
 
         } finally {
             if (input != null) {
