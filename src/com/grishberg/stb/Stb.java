@@ -19,8 +19,13 @@ import retrofit.RetrofitError;
 import retrofit.client.Response;
 import retrofit.converter.GsonConverter;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 import java.util.zip.CRC32;
 
@@ -50,8 +55,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
 
     public Stb(IView view, ILogger logger) {
         mLogger = logger;
-        mMac = generateMac();
-        mId = generateId();
+        readSettings();
         mPairing = new Pairing(this);
         mPlayer = new Player(view, mPairing, this, mLogger);
         mInput = new Input(mPlayer, mPairing, mLogger);
@@ -122,7 +126,6 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
                 System.out.println("error register device");
             }
         });
-
     }
 
     @Override
@@ -132,6 +135,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
 
     /**
      * receive message from mobile device event
+     *
      * @param queue client's queue name for reply
      * @param msg
      * @return
@@ -185,6 +189,50 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
                 .setEndpoint(RestConst.MqPolicy.API)
                 .setConverter(new GsonConverter(new Gson()))
                 .build();
+    }
+
+    private boolean readSettings() {
+        String cwd = Paths.get(".").toAbsolutePath().normalize().toString();
+        Properties prop = new Properties();
+        InputStream input = null;
+
+        try {
+
+            input = new FileInputStream(cwd+"/config.properties");
+
+            // load a properties file
+            prop.load(input);
+
+            // get the property value and print it out
+            mMac = prop.getProperty("mac");
+            mId = prop.getProperty("device_id");
+            mLogger.log("read mac from config");
+            mLogger.log("    mac = " + mMac);
+            mLogger.log("    dev_id = " + mId);
+            if (mMac == null || mMac.length() == 0) {
+                mMac = generateMac();
+            }
+            if (mId == null || mId.length() == 0){
+                mId = generateId();
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            mMac = generateMac();
+            mId = generateId();
+            mLogger.log("can't read config.properties, generating mac and dev_id");
+            mLogger.log("    mac = " + mMac);
+            mLogger.log("    dev_id = " + mId);
+
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return true;
     }
 
     private static String generateMac() {
