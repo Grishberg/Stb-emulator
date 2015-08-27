@@ -77,6 +77,12 @@ public class Input implements IInput, RequestHandler {
     public void left(boolean state) {
         if (state) {
             // start cycle
+            if(mIsRewind){
+                System.out.println("[Input] ERROR уже есть активная перемотка");
+                if(mTimer != null) {
+                    mTimer.cancel();
+                }
+            }
             mIsRewind = true;
             mTimer = new Timer();
             mTimer.schedule(new TimerTask() {
@@ -95,6 +101,12 @@ public class Input implements IInput, RequestHandler {
     public void right(boolean state) {
         if (state) {
             // start cycle
+            if(mIsRewind){
+                System.out.println("[Input] ERROR уже есть активная перемотка");
+                if(mTimer != null) {
+                    mTimer.cancel();
+                }
+            }
             mIsRewind = true;
             mTimer = new Timer();
             mTimer.schedule(new TimerTask() {
