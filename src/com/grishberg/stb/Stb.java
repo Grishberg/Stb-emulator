@@ -198,7 +198,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
 
         try {
 
-            input = new FileInputStream(cwd+"/config.properties");
+            input = new FileInputStream(cwd+"/config.txt");
 
             // load a properties file
             prop.load(input);
