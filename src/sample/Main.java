@@ -8,6 +8,8 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
@@ -23,7 +25,7 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 public class Main extends Application implements IView, ILogger {
-    private static final int LOG_PANEL_HEIGHT = 50;
+    private static final int LOG_PANEL_HEIGHT = 60;
     private Stb mStb;
     private Label secretCodeLabel;
     private Label positionLabel;
@@ -37,7 +39,7 @@ public class Main extends Application implements IView, ILogger {
     private boolean isFullScreen = false;
     private WebView mWebview;
     private TextField textField;
-    private Label mLogLabel;
+    private TextArea mLogArea;
     private StringBuilder mLogText;
     public Main() {
     }
@@ -95,14 +97,20 @@ public class Main extends Application implements IView, ILogger {
         logBar.setMinHeight(LOG_PANEL_HEIGHT);
         logBar.setAlignment(Pos.BOTTOM_CENTER);
         BorderPane.setAlignment(logBar, Pos.BOTTOM_CENTER);
-        mLogLabel = new Label();
-        logBar.getChildren().add(mLogLabel);
-        mLogLabel.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(mLogLabel, Priority.ALWAYS);
-        mLogLabel.setMinHeight(LOG_PANEL_HEIGHT);
-        mLogLabel.setTextFill(Color.web("#EEEEEE"));
-        mLogLabel.setStyle("-fx-background-color: #333333;");
-
+        mLogArea = new TextArea();
+        logBar.getChildren().add(mLogArea);
+        mLogArea.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(mLogArea, Priority.ALWAYS);
+        mLogArea.setMinHeight(LOG_PANEL_HEIGHT);
+        mLogArea.setPrefRowCount(3);
+        mLogArea.setWrapText(false);
+        mLogArea.setStyle("-fx-background-color: #333333;-fx-text-inner-color:#444444;");
+        mLogArea.setScrollTop(Double.MIN_VALUE);
+        mLogArea.textProperty().addListener(new ChangeListener() {
+            public void changed(ObservableValue ov, Object oldValue, Object newValue) {
+                mLogArea.setScrollTop(Double.MIN_VALUE);    //top
+            }
+        });
         // Add spacer
         Label spacer = new Label("   ");
         mediaBar.getChildren().add(spacer);
@@ -154,9 +162,8 @@ public class Main extends Application implements IView, ILogger {
     public void log(final String msg) {
         Platform.runLater(new Runnable() {
             public void run() {
-                mLogText.append(msg);
-                mLogText.append('\n');
-                mLogLabel.setText(mLogText.toString());
+                mLogArea.appendText(msg + "\n");
+                //mLogArea.setScrollTop(Double.MIN_VALUE);
             }
         });
     }
