@@ -1,0 +1,2 @@
+mac=a8f94b206177
+dev_id=cf9d10bc47f118b847c3811b8de6ce12
