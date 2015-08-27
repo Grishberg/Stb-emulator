@@ -1,5 +1,6 @@
 package sample;
 
+import com.grishberg.interfaces.ILogger;
 import com.grishberg.interfaces.IView;
 import com.grishberg.stb.Player;
 import com.grishberg.stb.Stb;
@@ -21,7 +22,8 @@ import javafx.scene.web.WebView;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
-public class Main extends Application implements IView {
+public class Main extends Application implements IView, ILogger {
+    private static final int LOG_PANEL_HEIGHT = 50;
     private Stb mStb;
     private Label secretCodeLabel;
     private Label positionLabel;
@@ -30,20 +32,24 @@ public class Main extends Application implements IView {
     private Slider timeSlider;
     private Slider volumeSlider;
     private HBox mediaBar;
+    private HBox logBar;
     private Stage mPrimaryStage;
     private boolean isFullScreen = false;
     private WebView mWebview;
     private TextField textField;
+    private Label mLogLabel;
+    private StringBuilder mLogText;
     public Main() {
     }
 
     @Override
     public void start(Stage primaryStage) {
+        mLogText = new StringBuilder();
         mPrimaryStage = primaryStage;
         primaryStage.setTitle("STB emulator");
         //Group root = new Group();
 
-        mStb = new Stb(this);
+        mStb = new Stb(this, this);
         mWebview = new WebView();
         StackPane.setAlignment(mWebview, Pos.CENTER);
         mWebview.setVisible(false);
@@ -84,6 +90,19 @@ public class Main extends Application implements IView {
         mediaBar.setPadding(new Insets(5, 10, 5, 10));
         BorderPane.setAlignment(mediaBar, Pos.CENTER);
 
+        //-------------------- log bar ---------------------
+        logBar = new HBox();
+        logBar.setMinHeight(LOG_PANEL_HEIGHT);
+        logBar.setAlignment(Pos.BOTTOM_CENTER);
+        BorderPane.setAlignment(logBar, Pos.BOTTOM_CENTER);
+        mLogLabel = new Label();
+        logBar.getChildren().add(mLogLabel);
+        mLogLabel.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(mLogLabel, Priority.ALWAYS);
+        mLogLabel.setMinHeight(LOG_PANEL_HEIGHT);
+        mLogLabel.setTextFill(Color.web("#EEEEEE"));
+        mLogLabel.setStyle("-fx-background-color: #333333;");
+
         // Add spacer
         Label spacer = new Label("   ");
         mediaBar.getChildren().add(spacer);
@@ -119,15 +138,27 @@ public class Main extends Application implements IView {
         root.setAlignment(Pos.TOP_CENTER);
         root.getChildren().add(mediaBar);
         root.getChildren().add(rootMedia);
+        root.getChildren().add(logBar);
 
-        Scene scene = new Scene(root, 640, 380);
+        Scene scene = new Scene(root, 640, 350+LOG_PANEL_HEIGHT);
         DoubleProperty width = mediaView.fitWidthProperty();
         DoubleProperty height = mediaView.fitHeightProperty();
         width.bind(Bindings.selectDouble(mediaView.sceneProperty(), "width").subtract(30));
-        height.bind(Bindings.selectDouble(mediaView.sceneProperty(), "height").subtract(30));
+        height.bind(Bindings.selectDouble(mediaView.sceneProperty(), "height").subtract(30+LOG_PANEL_HEIGHT));
 
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    @Override
+    public void log(final String msg) {
+        Platform.runLater(new Runnable() {
+            public void run() {
+                mLogText.append(msg);
+                mLogText.append('\n');
+                mLogLabel.setText(mLogText.toString());
+            }
+        });
     }
 
     @Override
@@ -260,7 +291,7 @@ public class Main extends Application implements IView {
             mPrimaryStage.setX(bounds.getMinX());
             mPrimaryStage.setY(bounds.getMinY());
             mPrimaryStage.setWidth(640);
-            mPrimaryStage.setHeight(400);
+            mPrimaryStage.setHeight(500);
             isFullScreen = !isFullScreen;
         }
     }

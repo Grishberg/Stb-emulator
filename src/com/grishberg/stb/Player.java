@@ -1,10 +1,7 @@
 package com.grishberg.stb;
 
 import com.grishberg.data.rest.RestConst;
-import com.grishberg.interfaces.IPairing;
-import com.grishberg.interfaces.IPlayer;
-import com.grishberg.interfaces.IPlayerObserver;
-import com.grishberg.interfaces.IView;
+import com.grishberg.interfaces.*;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Notification;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
@@ -65,6 +62,7 @@ public class Player implements IPlayer, RequestHandler {
     private IView mView;
     private boolean mIsPositionChanging;
     private Map<String, Object> mResult;
+    private ILogger mLogger;
     /**
      * test media content
      */
@@ -88,10 +86,11 @@ public class Player implements IPlayer, RequestHandler {
             "discovery channel"
     };
 
-    public Player(IView view, IPairing pairing, IPlayerObserver playerObserver) {
+    public Player(IView view, IPairing pairing, IPlayerObserver playerObserver, ILogger logger) {
         mView = view;
         mPairing = pairing;
         mPlayerObserver = playerObserver;
+        mLogger = logger;
     }
 
     /**
@@ -163,6 +162,7 @@ public class Player implements IPlayer, RequestHandler {
         mp.setOnReady(new Runnable() {
             public void run() {
                 System.out.println("----------Player onReady");
+                mLogger.log("----------Player onReady");
                 mDuration = mp.getMedia().getDuration();
                 mDurationSeconds = (int) mDuration.toSeconds();
                 mSeekDurationSec = mDurationSeconds / SEEK_DURATION_SEC;
@@ -175,6 +175,7 @@ public class Player implements IPlayer, RequestHandler {
             @Override
             public void run() {
                 System.out.println("----------Player onStopped");
+                mLogger.log("----------Player onStopped");
                 mState = PlayerState.STOPPED;
                 onStateChanged();
             }
@@ -183,6 +184,7 @@ public class Player implements IPlayer, RequestHandler {
             @Override
             public void run() {
                 System.out.println("----------Player on error");
+                mLogger.log("----------Player error");
                 mState = PlayerState.ERROR;
                 onStateChanged();
             }
@@ -194,6 +196,7 @@ public class Player implements IPlayer, RequestHandler {
                 //on end of video
                 //TODO: send
                 System.out.println("----------Player on end of media");
+                mLogger.log("----------Player on end of media");
                 stopRequested = true;
                 atEndOfMedia = true;
                 mState = PlayerState.END_PLAYING;
@@ -205,6 +208,7 @@ public class Player implements IPlayer, RequestHandler {
             public void changed(ObservableValue<? extends MediaPlayer.Status> observable
                     , MediaPlayer.Status oldValue, MediaPlayer.Status newValue) {
                 System.out.println("----------Player status changed value=" + newValue);
+                mLogger.log("----------Player status changed value=" + newValue);
             }
         });
     }
@@ -469,33 +473,40 @@ public class Player implements IPlayer, RequestHandler {
         String youtubeId = null;
         int id;
         int startSec;
-        switch (jsonrpc2Request.getMethod()) {
-            case COMMAND_GET_STATUS:
-                mResult = getStatus();
-                break;
-            case COMMAND_PLAY_YOUTUBE:
-                youtubeId = (String) params.get(0);
-                startSec = (int) ((long) params.get(1));
-                playYoutube(youtubeId, startSec);
-                break;
-            case COMMAND_PLAY_CONTENT:
-                //TODO: check token
-                id = Math.abs((int) ((long) params.get(0)));
-                int episode = Math.abs((int) ((long) params.get(1)));
-                String studio = (String) params.get(2);
-                startSec = (int) ((long) params.get(3));
-                playContent(id, episode, studio, startSec);
-                break;
+        try {
 
-            case COMMAND_PLAY_STREAM:
-                //TODO: check token
-                id = Math.abs((int) ((long) params.get(0)));
-                startSec = Math.abs((int) ((long) params.get(1)));
-                playStream(id, startSec);
-                break;
-            default:
-                return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, jsonrpc2Request.getID());
+            switch (jsonrpc2Request.getMethod()) {
+                case COMMAND_GET_STATUS:
+                    mResult = getStatus();
+                    break;
+                case COMMAND_PLAY_YOUTUBE:
+                    youtubeId = (String) params.get(0);
+                    startSec = (int) ((long) params.get(1));
+                    playYoutube(youtubeId, startSec);
+                    break;
+                case COMMAND_PLAY_CONTENT:
+                    //TODO: check token
+                    id = Math.abs((int) ((long) params.get(0)));
+                    int episode = Math.abs((int) ((long) params.get(1)));
+                    String studio = (String) params.get(2);
+                    startSec = (int) ((long) params.get(3));
+                    playContent(id, episode, studio, startSec);
+                    break;
+
+                case COMMAND_PLAY_STREAM:
+                    //TODO: check token
+                    id = Math.abs((int) ((long) params.get(0)));
+                    startSec = Math.abs((int) ((long) params.get(1)));
+                    playStream(id, startSec);
+                    break;
+                default:
+                    return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, jsonrpc2Request.getID());
+            }
+            return new JSONRPC2Response(mResult, jsonrpc2Request.getID());
+        } catch (Exception e){
+            e.printStackTrace();
+            mLogger.log(e.getMessage());
+            return new JSONRPC2Response(new JSONRPC2Error(-1,e.getMessage()),jsonrpc2Request.getID());
         }
-        return new JSONRPC2Response(mResult, jsonrpc2Request.getID());
     }
 }

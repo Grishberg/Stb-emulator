@@ -1,6 +1,7 @@
 package com.grishberg.stb;
 
 import com.grishberg.interfaces.IInput;
+import com.grishberg.interfaces.ILogger;
 import com.grishberg.interfaces.IOnTickListener;
 import com.grishberg.interfaces.IPairing;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
@@ -41,8 +42,10 @@ public class Input implements IInput, RequestHandler {
     private Timer mTimer;
     private boolean mIsRewind;
     private Map<String, Object> mResultRPC;
+    private ILogger mLogger;
 
-    public Input(Player player, IPairing pairing) {
+    public Input(Player player, IPairing pairing, ILogger logger) {
+        mLogger = logger;
         mPlayer = player;
         mParing = pairing;
         mTimer = new Timer();
@@ -79,6 +82,7 @@ public class Input implements IInput, RequestHandler {
             // start cycle
             if(mIsRewind){
                 System.out.println("[Input] ERROR уже есть активная перемотка");
+                mLogger.log("[Input] ERROR уже есть активная перемотка");
                 if(mTimer != null) {
                     mTimer.cancel();
                 }
@@ -103,6 +107,7 @@ public class Input implements IInput, RequestHandler {
             // start cycle
             if(mIsRewind){
                 System.out.println("[Input] ERROR уже есть активная перемотка");
+                mLogger.log("[Input] ERROR уже есть активная перемотка");
                 if(mTimer != null) {
                     mTimer.cancel();
                 }
@@ -277,6 +282,7 @@ public class Input implements IInput, RequestHandler {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            mLogger.log(e.getMessage());
             return new JSONRPC2Response(new JSONRPC2Error(-1, e.toString()), req.getID());
         }
 

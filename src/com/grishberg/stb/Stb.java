@@ -8,10 +8,7 @@ import com.grishberg.data.model.MqPolicyResponse;
 import com.grishberg.data.model.PairingInfo;
 import com.grishberg.data.model.QueueInfo;
 import com.grishberg.data.rest.RestConst;
-import com.grishberg.interfaces.IPlayerObserver;
-import com.grishberg.interfaces.ITokenLObserver;
-import com.grishberg.interfaces.IView;
-import com.grishberg.interfaces.LinkingPolicyService;
+import com.grishberg.interfaces.*;
 
 // The JSON-RPC 2.0 server framework package
 import com.thetransactioncompany.jsonrpc2.*;
@@ -49,13 +46,15 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
     private String mToken;
     private IView mView;
     private QueueInfo mLastQueue;
+    private ILogger mLogger;
 
-    public Stb(IView view) {
+    public Stb(IView view, ILogger logger) {
+        mLogger = logger;
         mMac = generateMac();
         mId = generateId();
         mPairing = new Pairing(this);
-        mPlayer = new Player(view, mPairing, this);
-        mInput = new Input(mPlayer, mPairing);
+        mPlayer = new Player(view, mPairing, this, mLogger);
+        mInput = new Input(mPlayer, mPairing, mLogger);
         mToken = null;
         mPolicyService = buildRestAdapter().create(LinkingPolicyService.class);
         mDispatcher = new Dispatcher();
@@ -93,7 +92,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
         System.out.println("Stb get policy");
         mHost = getMqAddress(response.getMq(), mMac);
         System.out.println("host = " + mHost);
-        mMqServer = new MqServer(mId, mHost, mMac, this);
+        mMqServer = new MqServer(mId, mHost, mMac, this, mLogger);
     }
 
     @Override

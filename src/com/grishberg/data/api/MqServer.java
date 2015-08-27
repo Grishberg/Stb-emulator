@@ -2,6 +2,7 @@ package com.grishberg.data.api;
 
 import com.grishberg.data.model.MqOutMessage;
 import com.grishberg.data.model.QueueInfo;
+import com.grishberg.interfaces.ILogger;
 import com.rabbitmq.client.*;
 
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
@@ -40,11 +41,13 @@ public class MqServer {
     private Channel mChannel;
     private List<String> mDevicesQueues;
     private IMqObserver mMqObserver;
+    private ILogger mLogger;
 
-    public MqServer(String id, String host, String mac, IMqObserver observer) {
+    public MqServer(String id, String host, String mac, IMqObserver observer, ILogger logger) {
         this.id = id;
         this.host = host;
         this.mMac = mac;
+        mLogger = logger;
         mMqObserver = observer;
         mDevicesQueues = new ArrayList<>(10);
         mConnectionFactory = new ConnectionFactory();
@@ -66,6 +69,7 @@ public class MqServer {
             reconnect();
         } catch (Exception e1) {
             e1.printStackTrace();
+            mLogger.log(e1.getMessage());
         }
     }
 
@@ -74,6 +78,8 @@ public class MqServer {
             mOutMessagesQueue.putLast(message);
         } catch (InterruptedException e) {
             e.printStackTrace();
+            mLogger.log(e.getMessage());
+
         }
     }
 
@@ -97,6 +103,7 @@ public class MqServer {
                 .build();
         mChannel.basicPublish("", routingKey, props,
                 mqOutMessage.getMessage().getBytes());
+        mLogger.log("[s] " + mqOutMessage.getMessage());
         System.out.println("[s] " + mqOutMessage.getMessage());
         //mChannel.basicAck(mqOutMessage.getDeliveryTag(), false);
         //channel.waitForConfirmsOrDie();
@@ -119,6 +126,7 @@ public class MqServer {
                             try {
                                 publishMessage(mqOutMessage);
                             } catch (Exception e) {
+                                mLogger.log("[f] " + mqOutMessage.getMessage());
                                 System.out.println("[f] " + mqOutMessage.getMessage());
                                 mOutMessagesQueue.putFirst(mqOutMessage);
                                 throw e;
@@ -128,6 +136,8 @@ public class MqServer {
                         break;
                     } catch (Exception e) {
                         mConnected = false;
+                        mLogger.log("publish thred Connection broken: " + e.toString());
+
                         System.out.println("publish thred Connection broken: " + e.toString());
                         try {
                             Thread.sleep(5000); //sleep and then try again
@@ -175,6 +185,7 @@ public class MqServer {
                             String message = new String(delivery.getBody());
                             //extract id and send to main thread
                             System.out.println("[r] " + message);
+                            mLogger.log("[r] " + message);
                             //TODO: разобрать рпц запрос
                             if (mMqObserver != null) {
                                 String replyQueueName = delivery.getProperties().getReplyTo();
@@ -193,6 +204,7 @@ public class MqServer {
                         break;
 
                     } catch (Exception e1) {
+                        mLogger.log("subscibe Connection broken " + e1.toString());
                         System.out.println("subscibe Connection broken");
                         mConnected = false;
                         try {
