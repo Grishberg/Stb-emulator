@@ -26,13 +26,10 @@ public class Player implements IPlayer, RequestHandler {
     private static final String COMMAND_PLAY_CONTENT = "Player.playContent";
     private static final String COMMAND_PLAY_YOUTUBE = "Player.playYoutube";
     private static final String COMMAND_GET_STATUS = "Player.getStatus";
-    private static final String COMMAND_GET_PROPERTIES = "Player.getProperties";
-    private static final String NOTIFY_PLAYER_ON_STOP_CONTENT = "Player.onStopContent";
-    private static final String PARAM_PLAYER_NEXT = "PLAYER_NEXT";
-    private static final String PARAM_PLAYER_FWD = "PLAYER_FWD";
-    private static final String PARAM_PLAYER_STOP = "PLAYER_STOP";
-    private static final String NOTIFY_ERROR = "onErrorNotify";
-    private static final String NOTIFY_START_PLAYING = "Player.onStartPlaying";
+    private static final int STATE_NONE = 0;
+    private static final int STATE_PLAYING = 1;
+    private static final int STATE_PAUSED = 2;
+    private static final int STATE_STOPPED = 3;
     private static final int SEEK_DURATION_SEC = 30;
 
     public enum PlayerState {
@@ -48,7 +45,7 @@ public class Player implements IPlayer, RequestHandler {
     private int mDurationSeconds;
     private int mPositionSeconds;
     private int mSeekDurationSec;
-    private PlayerState mState = PlayerState.NONE;
+    private int mState = 0;
     private String mContentTitle;
     private int mEkId;
     private int mEpId;
@@ -63,25 +60,22 @@ public class Player implements IPlayer, RequestHandler {
     private boolean mIsPositionChanging;
     private Map<String, Object> mResult;
     private ILogger mLogger;
+    private String mType;
     /**
      * test media content
      */
-    private static final String[] CONTENT = {
+    private static final String[] SRC_CONTENT = {
             "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8"
     };
-
-    private static final String[] CONTENT_STREAM = {
+    private static final String[] SRC_CONTENT_STREAM = {
             "http://3.hls.bolshoe.tv/1/streaming/discovery/tvrec/playlist.m3u8"
     };
-
-
     /**
      * media content title
      */
     private static final String[] CONTENT_TITLE = {
             "jobs"
     };
-
     private static final String[] CONTENT_STREAM_TITLE = {
             "discovery channel"
     };
@@ -99,15 +93,19 @@ public class Player implements IPlayer, RequestHandler {
     private void onStateChanged() {
         mView.onChangedState(mState);
         JSONRPC2Notification notification = null;
+        Map<String, Object> result = new HashMap<>();
         switch (mState) {
             case PLAYING:
-                notification = new JSONRPC2Notification(NOTIFY_START_PLAYING);
+                notification = new JSONRPC2Notification(RestConst.Notifications.PLAYER_ON_START);
                 break;
             case END_PLAYING:
-                notifyOnStop(mEkId, (int) mCurrentPosition.toSeconds(), PARAM_PLAYER_STOP);
+                notifyOnStop((int) mCurrentPosition.toSeconds(), RestConst.Values.PLAYER_STOP);
+                mState = PlayerState.NONE;
                 break;
             case ERROR:
-                notification = new JSONRPC2Notification(NOTIFY_ERROR);
+                result.put(RestConst.Fields.CODE, 2);
+                notification = new JSONRPC2Notification(RestConst.Notifications.PLAYER_ON_ERROR, result);
+                mState = PlayerState.NONE;
                 break;
         }
         if (notification != null) {
@@ -115,12 +113,16 @@ public class Player implements IPlayer, RequestHandler {
         }
     }
 
-    private void notifyOnStop(int id, int endSec, String reason) {
+    private void notifyOnStop(int endSec, String reason) {
         JSONRPC2Notification notification = null;
         Map<String, Object> result = new HashMap<>();
-        result.put(RestConst.field.ID, id);
-        result.put(RestConst.field.END_SEC, endSec);
-        result.put(RestConst.field.REASON, reason);
+        result.put(RestConst.Fields.TYPE, mType);
+        int epId = mEpId;
+        String id = getMediaId();
+        result.put(RestConst.Fields.ID, id);
+        result.put(RestConst.Fields.EP_ID, epId);
+        result.put(RestConst.Fields.END_SEC, endSec);
+        result.put(RestConst.Fields.REASON, reason);
 
         mPlayerObserver.onNotify(notification.toJSONString());
     }
@@ -215,7 +217,7 @@ public class Player implements IPlayer, RequestHandler {
 
     public void left() {
         if (mp == null) return;
-        if(!mIsPositionChanging){
+        if (!mIsPositionChanging) {
             mView.onRewindStateChanged(true);
         }
         mIsPositionChanging = true;
@@ -228,7 +230,7 @@ public class Player implements IPlayer, RequestHandler {
 
     public void right() {
         if (mp == null) return;
-        if(!mIsPositionChanging){
+        if (!mIsPositionChanging) {
             mView.onRewindStateChanged(true);
         }
         mIsPositionChanging = true;
@@ -240,17 +242,17 @@ public class Player implements IPlayer, RequestHandler {
     }
 
     public void doSeek() {
-        if(mIsPositionChanging){
+        if (mIsPositionChanging) {
             mView.onRewindStateChanged(false);
         }
         mState = PlayerState.BUFFERING;
         mIsPositionChanging = false;
-        if(mp != null) {
+        if (mp != null) {
             mp.seek(mCurrentPosition);
         }
     }
 
-    public void cancelRewind(){
+    public void cancelRewind() {
         mIsPositionChanging = false;
         mView.onRewindStateChanged(false);
     }
@@ -263,7 +265,7 @@ public class Player implements IPlayer, RequestHandler {
         } else {
             mVolume = mPrevVolume;
         }
-        if(mp != null) {
+        if (mp != null) {
             mp.setVolume(mVolume / 100.0);
         }
         mView.onChangedVolume(mVolume);
@@ -274,7 +276,7 @@ public class Player implements IPlayer, RequestHandler {
         if (mVolume < 0) {
             mVolume = 0;
         }
-        if(mp != null) {
+        if (mp != null) {
             mp.setVolume(mVolume / 100.0);
         }
         mView.onChangedVolume(mVolume);
@@ -285,7 +287,7 @@ public class Player implements IPlayer, RequestHandler {
         if (mVolume > 100) {
             mVolume = 100;
         }
-        if(mp != null) {
+        if (mp != null) {
             mp.setVolume(mVolume / 100.0);
         }
         mView.onChangedVolume(mVolume);
@@ -349,14 +351,14 @@ public class Player implements IPlayer, RequestHandler {
 
     @Override
     public void playContent(int id, int episode, String studio, int startSec) {
-
+        mType = RestConst.Values.CONTENT;
         mEkId = id;
         mEpId = episode;
-        int index = id % CONTENT.length;
-        String content = CONTENT[index];
+        int index = id % SRC_CONTENT.length;
+        String content = SRC_CONTENT[index];
         mContentTitle = CONTENT_TITLE[index];
         //stop old media
-        if(mp != null && mp.getStatus() == MediaPlayer.Status.PLAYING){
+        if (mp != null && mp.getStatus() == MediaPlayer.Status.PLAYING) {
             mp.stop();
         }
 
@@ -369,12 +371,13 @@ public class Player implements IPlayer, RequestHandler {
 
     @Override
     public void playStream(int idStream, int startSec) {
+        mType = RestConst.Values.STREAM;
         mIdStream = idStream;
-        int index = idStream % CONTENT_STREAM.length;
-        String content = CONTENT_STREAM[index];
+        int index = idStream % SRC_CONTENT_STREAM.length;
+        String content = SRC_CONTENT_STREAM[index];
         mContentTitle = CONTENT_STREAM_TITLE[index];
         //stop old media
-        if(mp != null && mp.getStatus() == MediaPlayer.Status.PLAYING){
+        if (mp != null && mp.getStatus() == MediaPlayer.Status.PLAYING) {
             mp.stop();
         }
         Media media = new Media(content);
@@ -386,8 +389,9 @@ public class Player implements IPlayer, RequestHandler {
 
     @Override
     public void playYoutube(String id, int startSec) {
+        mType = RestConst.Values.YOUTUBE;
         //stop old media
-        if(mp != null && mp.getStatus() == MediaPlayer.Status.PLAYING){
+        if (mp != null && mp.getStatus() == MediaPlayer.Status.PLAYING) {
             mp.stop();
         }
         mYoutubeId = id;
@@ -396,13 +400,64 @@ public class Player implements IPlayer, RequestHandler {
     }
 
     @Override
-    public Map<String, Object> getStatus() {
+    public Map<String, Object> getStatus(String[] params) {
+        if (params != null && params.length == 0) {
+            params = new String[]{
+                    RestConst.Fields.TYPE
+                    , RestConst.Fields.ID
+                    , RestConst.Fields.EP_ID
+                    , RestConst.Fields.TITLE
+                    , RestConst.Fields.STATE
+                    , RestConst.Fields.POSITION
+                    , RestConst.Fields.VOLUME};
+        }
+        
         Map<String, Object> result = new HashMap<>();
-        result.put(RestConst.field.EK_ID, mEkId);
-        result.put(RestConst.field.EP_ID, mEpId);
-        result.put(RestConst.field.EK_TITLE, mContentTitle);
-        result.put(RestConst.field.STATE, mState.ordinal());
+        String id = "";
+        for (String parameter : params) {
+            switch (parameter) {
+                case RestConst.Fields.ID:
+                    result.put(parameter, getMediaId());
+                    break;
+                case RestConst.Fields.POSITION:
+                    result.put(parameter, getPosition());
+                    break;
+                case RestConst.Fields.EP_ID:
+                    result.put(parameter, mEpId);
+                    break;
+                case RestConst.Fields.STATE:
+                    result.put(parameter, mState);
+                    break;
+                case RestConst.Fields.VOLUME:
+                    result.put(parameter, mVolume);
+                    break;
+                case RestConst.Fields.TITLE:
+                    result.put(parameter, mContentTitle);
+                    break;
+            }
+        }
         return result;
+    }
+
+    private String getMediaId() {
+        String id = "";
+        switch (mType) {
+            case RestConst.Values.CONTENT:
+            case RestConst.Values.STREAM:
+                id = String.valueOf(mEkId);
+                break;
+            case RestConst.Values.YOUTUBE:
+                id = mYoutubeId;
+                break;
+        }
+        return id;
+    }
+
+    private int getPosition() {
+        if (mCurrentPosition != null) {
+            return (int) mCurrentPosition.toSeconds();
+        }
+        return -1;
     }
 
     /**
@@ -458,7 +513,7 @@ public class Player implements IPlayer, RequestHandler {
                 , COMMAND_PLAY_STREAM
                 , COMMAND_PLAY_YOUTUBE
                 , COMMAND_GET_STATUS
-                , COMMAND_GET_PROPERTIES};
+        };
     }
 
     public void fullscreen() {
@@ -477,7 +532,7 @@ public class Player implements IPlayer, RequestHandler {
 
             switch (jsonrpc2Request.getMethod()) {
                 case COMMAND_GET_STATUS:
-                    mResult = getStatus();
+                    mResult = getStatus(params);
                     break;
                 case COMMAND_PLAY_YOUTUBE:
                     youtubeId = (String) params.get(0);
@@ -503,10 +558,10 @@ public class Player implements IPlayer, RequestHandler {
                     return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, jsonrpc2Request.getID());
             }
             return new JSONRPC2Response(mResult, jsonrpc2Request.getID());
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             mLogger.log(e.getMessage());
-            return new JSONRPC2Response(new JSONRPC2Error(-1,e.getMessage()),jsonrpc2Request.getID());
+            return new JSONRPC2Response(new JSONRPC2Error(-1, e.getMessage()), jsonrpc2Request.getID());
         }
     }
 }

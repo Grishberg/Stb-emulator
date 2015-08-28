@@ -2,6 +2,7 @@ package com.grishberg.interfaces;
 
 import com.grishberg.data.model.PlayerStatus;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -11,5 +12,5 @@ public interface IPlayer {
     void playContent(int id, int episode, String studio, int startSec);
     void playStream(int idStream, int startSec);
     void playYoutube(String id, int startSec);
-    Map<String,Object> getStatus();
+    Map<String,Object> getStatus(String[] params);
 }
