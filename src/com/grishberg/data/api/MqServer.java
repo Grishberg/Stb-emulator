@@ -103,8 +103,8 @@ public class MqServer {
                 .build();
         mChannel.basicPublish("", routingKey, props,
                 mqOutMessage.getMessage().getBytes());
-        mLogger.log("[s] " + mqOutMessage.getMessage());
-        System.out.println("[s] " + mqOutMessage.getMessage());
+        mLogger.log("[s] replyTo = "+routingKey+" body = " + mqOutMessage.getMessage());
+        System.out.println("[s] replyTo = "+routingKey+" body = " + mqOutMessage.getMessage());
         //mChannel.basicAck(mqOutMessage.getDeliveryTag(), false);
         //channel.waitForConfirmsOrDie();
     }
@@ -189,6 +189,7 @@ public class MqServer {
                             //TODO: разобрать рпц запрос
                             if (mMqObserver != null) {
                                 String replyQueueName = delivery.getProperties().getReplyTo();
+                                mLogger.log("replyTo = "+replyQueueName);
                                 QueueInfo queueInfo = new QueueInfo(replyQueueName
                                         , delivery.getProperties().getCorrelationId());
                                 JSONRPC2Response response = mMqObserver.onMessage(queueInfo, message);

@@ -25,7 +25,7 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 public class Main extends Application implements IView, ILogger {
-    private static final int LOG_PANEL_HEIGHT = 60;
+    private static final int LOG_PANEL_HEIGHT = 100;
     private Stb mStb;
     private Label secretCodeLabel;
     private Label positionLabel;

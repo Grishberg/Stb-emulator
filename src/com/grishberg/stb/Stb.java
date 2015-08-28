@@ -204,7 +204,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
             prop.load(input);
 
             // get the property value and print it out
-            mMac = prop.getProperty("mac");
+            mMac = prop.getProperty("mac").toUpperCase();
             mId = prop.getProperty("device_id");
             mLogger.log("read mac from config");
             mLogger.log("    mac = " + mMac);
@@ -242,7 +242,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
         for (int i = 0; i < 4; i++) {
             builder.append(DIGITS_HEX.charAt(r.nextInt(N)));
         }
-        return builder.toString();
+        return builder.toString().toUpperCase();
     }
 
     private static String generateId() {
