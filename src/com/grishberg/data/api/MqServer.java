@@ -4,7 +4,6 @@ import com.grishberg.data.model.MqOutMessage;
 import com.grishberg.data.model.QueueInfo;
 import com.grishberg.interfaces.ILogger;
 import com.rabbitmq.client.*;
-
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 import javafx.concurrent.Task;
 
@@ -27,8 +26,7 @@ public class MqServer {
     private static final int STATUS_SUBSCRIBED = 2;
     private static final int STATUS_PUBLISHED = 3;
     private static final int STATUS_QUEUE_NOT_EXISTS = 4;
-
-    private String id;
+    private long id;
     private String host;
     private String mMac;
     private String mExchange = "rpc";
@@ -43,7 +41,7 @@ public class MqServer {
     private IMqObserver mMqObserver;
     private ILogger mLogger;
 
-    public MqServer(String id, String host, String mac, IMqObserver observer, ILogger logger) {
+    public MqServer(long id, String host, String mac, IMqObserver observer, ILogger logger) {
         this.id = id;
         this.host = host;
         this.mMac = mac;
@@ -79,7 +77,6 @@ public class MqServer {
         } catch (InterruptedException e) {
             e.printStackTrace();
             mLogger.log(e.getMessage());
-
         }
     }
 
@@ -100,11 +97,12 @@ public class MqServer {
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
                 .correlationId(corrId)
+                .replyTo(mMac)
                 .build();
         mChannel.basicPublish("", routingKey, props,
                 mqOutMessage.getMessage().getBytes());
-        mLogger.log("[s] replyTo = "+routingKey+" body = " + mqOutMessage.getMessage());
-        System.out.println("[s] replyTo = "+routingKey+" body = " + mqOutMessage.getMessage());
+        mLogger.log("[s] replyTo = " + routingKey + " body = " + mqOutMessage.getMessage());
+        System.out.println("[s] replyTo = " + routingKey + " body = " + mqOutMessage.getMessage());
         //mChannel.basicAck(mqOutMessage.getDeliveryTag(), false);
         //channel.waitForConfirmsOrDie();
     }
@@ -185,25 +183,27 @@ public class MqServer {
                             String message = new String(delivery.getBody());
                             //extract id and send to main thread
                             System.out.println("[r] " + message);
-                            mLogger.log("[r] " + message);
-                            //TODO: разобрать рпц запрос
                             if (mMqObserver != null) {
+                                mLogger.log("[r] " + message);
                                 String replyQueueName = delivery.getProperties().getReplyTo();
-                                mLogger.log("replyTo = "+replyQueueName);
-                                QueueInfo queueInfo = new QueueInfo(replyQueueName
-                                        , delivery.getProperties().getCorrelationId());
-                                JSONRPC2Response response = mMqObserver.onMessage(queueInfo, message);
-                                if (response != null) {
-                                    publishMessage(new MqOutMessage(
-                                            replyQueueName
-                                            , response.toJSONString()
-                                            , delivery.getProperties().getCorrelationId()));
+                                mLogger.log("replyTo = " + replyQueueName);
+                                if (replyQueueName != null) {
+                                    QueueInfo queueInfo = new QueueInfo(replyQueueName
+                                            , delivery.getProperties().getCorrelationId());
+                                    JSONRPC2Response response = mMqObserver.onMessage(queueInfo, message);
+                                    if (response != null) {
+                                        publishMessage(new MqOutMessage(
+                                                replyQueueName
+                                                , response.toJSONString()
+                                                , delivery.getProperties().getCorrelationId()));
+                                    }
+                                } else {
+                                    mLogger.log("incoming notification");
                                 }
                             }
                         }
                     } catch (InterruptedException e) {
                         break;
-
                     } catch (Exception e1) {
                         mLogger.log("subscibe Connection broken " + e1.toString());
                         System.out.println("subscibe Connection broken");
@@ -217,7 +217,6 @@ public class MqServer {
                 }
                 System.out.println("end subscribe thread");
             }
-
         });
         mSubscribeThread.start();
     }

@@ -4,19 +4,19 @@ package com.grishberg.data.model;
  * Created by g on 13.08.15.
  */
 public class Profile {
-    private int id;
+    private String id;
     private String name;
 
-    public Profile(int id, String name) {
+    public Profile(String id, String name) {
         this.id = id;
         this.name = name;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 

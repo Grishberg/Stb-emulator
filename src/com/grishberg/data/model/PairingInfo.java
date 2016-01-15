@@ -10,16 +10,16 @@ public class PairingInfo {
     String key = "";
     String token = "";
     String mac = "";
-    String deviceId = "";
+    long deviceId = 0;
 
-    public PairingInfo(String key, String token, String mac, String deviceId) {
+    public PairingInfo(String key, String token, String mac, long deviceId) {
         this.key = key;
         this.token = token;
         this.mac = mac;
         this.deviceId = deviceId;
     }
 
-    public String toJson(){
+    public String toJson() {
         Gson gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -50,11 +50,11 @@ public class PairingInfo {
         this.mac = mac;
     }
 
-    public String getDeviceId() {
+    public long getDeviceId() {
         return deviceId;
     }
 
-    public void setDeviceId(String deviceId) {
+    public void setDeviceId(long deviceId) {
         this.deviceId = deviceId;
     }
 }

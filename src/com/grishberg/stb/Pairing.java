@@ -17,7 +17,6 @@ import java.util.Map;
  * Created by g on 13.08.15.
  */
 public class Pairing implements RequestHandler, IPairing {
-
     private ITokenLObserver mTokenObserver;
     private Map<String, Profile> mTokens;
 
@@ -27,14 +26,14 @@ public class Pairing implements RequestHandler, IPairing {
     }
 
     //Зарегистрировать МП на УП
-    public String addDevice(int id, String name) {
+    public boolean addDevice(String id, String name) {
         String token = mTokenObserver.getLastToken();
-        if (token == null) return "";
+        if (token == null) return false;
         Profile profile = new Profile(id, name);
         mTokens.put(token, profile);
         mTokenObserver.registerDevice();
         mTokenObserver.onDeviceConnected(name);
-        return "";
+        return true;
     }
 
     public Profile getProfile(String token) {
@@ -53,13 +52,12 @@ public class Pairing implements RequestHandler, IPairing {
         if (req.getMethod().equals("Pairing.addDevice")) {
             List params = (List) req.getParams();
             try {
-                int id = (int) ((long) params.get(0));
+                String id = (String) params.get(0);
                 String name = (String) params.get(1);
-                return new JSONRPC2Response(addDevice(id,name), req.getID());
-
-            } catch (Exception e){
-                System.out.println("rpc error "+e.toString());
-                return new JSONRPC2Response(new JSONRPC2Error(-1,"error"), req.getID());
+                return new JSONRPC2Response(addDevice(id, name), req.getID());
+            } catch (Exception e) {
+                System.out.println("rpc error " + e.toString());
+                return new JSONRPC2Response(new JSONRPC2Error(-1, "error"), req.getID());
             }
         }
         return null;

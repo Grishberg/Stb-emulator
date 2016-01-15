@@ -38,7 +38,7 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
     private static final String DIGITS_DEC = "0123456789";
     private static final String DIGITS_HEX = "0123456789abcdef";
     private static final String TAG = Stb.class.getSimpleName();
-    private String mId = "01234567890";
+    private long mId = 666;
     private String mMac;
     private String mKey;
     private LinkingPolicyService mPolicyService;
@@ -198,21 +198,22 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
 
         try {
 
-            input = new FileInputStream(cwd+"/config.txt");
+            input = new FileInputStream(cwd + "/config.txt");
 
             // load a properties file
             prop.load(input);
 
             // get the property value and print it out
             mMac = prop.getProperty("mac").toUpperCase();
-            mId = prop.getProperty("device_id");
+            String strId = prop.getProperty("device_id");
+            mId = Long.valueOf(strId);
             mLogger.log("read mac from config");
             mLogger.log("    mac = " + mMac);
             mLogger.log("    device_id = " + mId);
             if (mMac == null || mMac.length() == 0) {
                 mMac = generateMac();
             }
-            if (mId == null || mId.length() == 0){
+            if (mId == 0) {
                 mId = generateId();
             }
         } catch (IOException ex) {
@@ -222,7 +223,6 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
             mLogger.log("can't read config.properties, generating mac and device_id");
             mLogger.log("    mac = " + mMac);
             mLogger.log("    device_id = " + mId);
-
         } finally {
             if (input != null) {
                 try {
@@ -245,14 +245,8 @@ public class Stb implements MqServer.IMqObserver, ITokenLObserver, IPlayerObserv
         return builder.toString().toUpperCase();
     }
 
-    private static String generateId() {
-        StringBuilder builder = new StringBuilder();
-        final int N = DIGITS_HEX.length();
-        Random r = new Random();
-        for (int i = 0; i < 32; i++) {
-            builder.append(DIGITS_HEX.charAt(r.nextInt(N)));
-        }
-        return builder.toString();
+    private static long generateId() {
+        return (long) (Math.random() * 9999.0);
     }
 
     private static String generateSecretKey() {

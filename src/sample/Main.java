@@ -10,6 +10,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
@@ -23,6 +24,7 @@ import javafx.scene.text.Font;
 import javafx.scene.web.WebView;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 public class Main extends Application implements IView, ILogger {
     private static final int LOG_PANEL_HEIGHT = 100;
@@ -41,6 +43,7 @@ public class Main extends Application implements IView, ILogger {
     private TextField textField;
     private TextArea mLogArea;
     private StringBuilder mLogText;
+
     public Main() {
     }
 
@@ -148,12 +151,19 @@ public class Main extends Application implements IView, ILogger {
         root.getChildren().add(rootMedia);
         root.getChildren().add(logBar);
 
-        Scene scene = new Scene(root, 640, 350+LOG_PANEL_HEIGHT);
+        Scene scene = new Scene(root, 640, 350 + LOG_PANEL_HEIGHT);
         DoubleProperty width = mediaView.fitWidthProperty();
         DoubleProperty height = mediaView.fitHeightProperty();
         width.bind(Bindings.selectDouble(mediaView.sceneProperty(), "width").subtract(30));
-        height.bind(Bindings.selectDouble(mediaView.sceneProperty(), "height").subtract(30+LOG_PANEL_HEIGHT));
+        height.bind(Bindings.selectDouble(mediaView.sceneProperty(), "height").subtract(30 + LOG_PANEL_HEIGHT));
 
+        primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent t) {
+                Platform.exit();
+                System.exit(0);
+            }
+        });
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -256,14 +266,13 @@ public class Main extends Application implements IView, ILogger {
     public void onRewindStateChanged(final boolean isRewind) {
         Platform.runLater(new Runnable() {
             public void run() {
-                if(isRewind){
+                if (isRewind) {
                     timeSlider.setStyle("-fx-background-color: #0000FF;");
                 } else {
                     timeSlider.setStyle("-fx-background-color: #FFFFFF;");
                 }
             }
         });
-
     }
 
     /**

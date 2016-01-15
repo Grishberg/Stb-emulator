@@ -45,7 +45,7 @@ public class Player implements IPlayer, RequestHandler {
     private int mDurationSeconds;
     private int mPositionSeconds;
     private int mSeekDurationSec;
-    private int mState = 0;
+    private PlayerState mState = PlayerState.NONE;
     private String mContentTitle;
     private int mEkId;
     private int mEpId;
@@ -60,7 +60,7 @@ public class Player implements IPlayer, RequestHandler {
     private boolean mIsPositionChanging;
     private Map<String, Object> mResult;
     private ILogger mLogger;
-    private String mType;
+    private String mType = "";
     /**
      * test media content
      */
@@ -411,7 +411,7 @@ public class Player implements IPlayer, RequestHandler {
                     , RestConst.Fields.POSITION
                     , RestConst.Fields.VOLUME};
         }
-        
+
         Map<String, Object> result = new HashMap<>();
         String id = "";
         for (String parameter : params) {
@@ -532,7 +532,7 @@ public class Player implements IPlayer, RequestHandler {
 
             switch (jsonrpc2Request.getMethod()) {
                 case COMMAND_GET_STATUS:
-                    mResult = getStatus(params);
+                    mResult = getStatus(new String[]{});
                     break;
                 case COMMAND_PLAY_YOUTUBE:
                     youtubeId = (String) params.get(0);

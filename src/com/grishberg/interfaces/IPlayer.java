@@ -1,8 +1,5 @@
 package com.grishberg.interfaces;
 
-import com.grishberg.data.model.PlayerStatus;
-
-import java.util.List;
 import java.util.Map;
 
 /**
